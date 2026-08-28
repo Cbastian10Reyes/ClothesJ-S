@@ -1,23 +1,63 @@
-import React, { useContext } from 'react'
+import React, { useContext } from "react"
 
 import Product from "@/components/Product"
+
 import { CartContext } from "@/App"
 
-export default function ProductList({ products, onAddToCart }) {
-  const {cart} = useContext(CartContext)
+import api from "../api"
 
-	return (
-		<div className="flex flex-wrap justify-center">
-			{products.map(product => (
-				<Product
-					key={product._id}
-					imgSrc={product.image}
-					price={product.price}
-					link={`/products/${product._id}`}
-					onAddToCart={() => onAddToCart(product)}
-					isInCart={cart.products.some(p => p.id === product._id)}
-				/>					
-			))}
-		</div>
-	)
+export default function ProductList({
+  products = [],
+  onAddToCart,
+}) {
+  const { cart } = useContext(CartContext)
+
+  if (!Array.isArray(products)) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-wrap justify-center">
+      {products.map((product) => {
+        const image =
+          api.getProductPrimaryImage(product)
+
+        const originalPrice =
+          api.getProductMinPrice(product)
+
+        const discount =
+          Number(product.discount) || 0
+
+        const hasDiscount =
+          discount > 0
+
+        const finalPrice = hasDiscount
+          ? originalPrice -
+            (originalPrice * discount) / 100
+          : originalPrice
+
+        const isInCart =
+          cart?.products?.some(
+            (cartProduct) =>
+              cartProduct._id === product._id
+          ) ?? false
+
+        return (
+          <Product
+            key={product._id}
+            name={product.name}
+            imgSrc={image}
+            price={finalPrice}
+            originalPrice={originalPrice}
+            discount={discount}
+            link={`/products/${product._id}`}
+            onAddToCart={() =>
+              onAddToCart(product)
+            }
+            isInCart={isInCart}
+          />
+        )
+      })}
+    </div>
+  )
 }

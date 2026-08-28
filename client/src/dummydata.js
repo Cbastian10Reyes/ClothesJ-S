@@ -1,55 +1,49 @@
 export const sliderItems = [
   {
     id: 1,
-    image: "https://images.pexels.com/photos/7973302/pexels-photo-7973302.jpeg?auto=compress&cs=tinysrgb&dpr=3&h=750&w=1260",
-    title: "SUMMER SALE",
-    desc: "DON'T COMPROMISE ON STYLE! GET FLAT 30% OFF FOR NEW ARRIVALS.",
+    image: "https://images.pexels.com/photos/14555652/pexels-photo-14555652.jpeg?auto=compress&cs=tinysrgb&dpr=3&h=750&w=1260",
+    title: "OFERTAS DENIMS",
+    desc: "Por lanzamiento 15% de descuento en toda la tienda.",
     bg: "f5fafd",
+    categoryId: "6a8c7515ed5e69696954ae0c"
   },
   {
     id: 2,
-    image: "https://images.pexels.com/photos/1126993/pexels-photo-1126993.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    title: "AUTUMN COLLECTION",
-    desc: "DON'T COMPROMISE ON STYLE! GET FLAT 30% OFF FOR NEW ARRIVALS.",
+    image: "https://images.pexels.com/photos/8851053/pexels-photo-8851053.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    title: "CAMISETAS Y SACOS",
+    desc: "Por lanzamiento 15% de descuento en toda la tienda.",
     bg: "fcf1ed",
+    categoryId: "6a8c9e1859888543ab70f861"
   },
   {
     id: 3,
-    image: "https://images.pexels.com/photos/999267/pexels-photo-999267.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    title: "FORMAL WEAR",
-    desc: "DON'T COMPROMISE ON STYLE! GET FLAT 30% OFF FOR NEW ARRIVALS.",
+    image: "https://res.cloudinary.com/tyskxzn2/image/upload/v1787956845/descarga_5.jpg",
+    title: "CALZADO",
+    desc: "Por lanzamiento 15% de descuento en toda la tienda.",
     bg: "fbf0f4",
-  },
-  {
-    id: 4,
-    image: "https://images.pexels.com/photos/1158670/pexels-photo-1158670.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    title: "TOO ABSTRACT",
-    desc: "DON'T COMPROMISE ON STYLE! GET FLAT 30% OFF FOR NEW ARRIVALS.",
-    bg: "fbf0f4",
-  },  
+    categoryId: "6a8c9dd159888543ab70f860"
+  }
 
 ]
 
 export const categories = [
   {
     id: 1,
-    image: "https://images.pexels.com/photos/1852382/pexels-photo-1852382.jpeg?auto=compress&cs=tinysrgb&h=750&w=1260",
-    title: "SHIRT STYLE!",
+    image: "https://res.cloudinary.com/tyskxzn2/image/upload/v1787600938/products/iionxboauslzlalpudee.jpg",
+    title: "Calzado",
+    category: "6a8c9dd159888543ab70f860"
   },
   {
     id: 2,
-    image: "https://images.pexels.com/photos/594610/pexels-photo-594610.jpeg?auto=compress&cs=tinysrgb&dpr=3&h=750&w=1260",
+    image: "https://res.cloudinary.com/tyskxzn2/image/upload/v1787601089/products/ixxof0lukdqzol80xzwi.jpg",
     title: "DENIMS",
+    category: "6a8c7515ed5e69696954ae0c"
   },
   {
     id: 3,
-    image: "https://images.pexels.com/photos/449977/pexels-photo-449977.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    title: "LEATHER JACKETS",
-  },
-  {
-    id: 4,
-    image: "https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    title: "HOODIES",
+    image: "https://res.cloudinary.com/tyskxzn2/image/upload/v1787593207/products/vcpppcsbvuc3er6jc0qc.jpg",
+    title: "Camisetas y Sacos",
+    category: "6a8c9e1859888543ab70f861"
   },
 ];
 

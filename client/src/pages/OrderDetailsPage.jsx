@@ -38,19 +38,19 @@ export default function OrderDetailsPage() {
 						<OrderStatus currentStatus={order.status} />
 					</div>
 					<div className="text-center space-y-2">
-						<h3 className="text-xl mt-10">Shipping Info:</h3>
+						<h3 className="text-xl mt-10">Info de compra:</h3>
 						<div className="space-x-1">
-							<span className="font-normal">Address:</span> 
+							<span className="font-normal">dirección:</span> 
 							<span className="font-light">{order.address}</span>
 						</div>
 						<div className="space-x-1">
-							<span className="font-normal">Phone No.:</span> 
+							<span className="font-normal">Numero de telefono:</span> 
 							<span className="font-light">+1234-567-890</span>
 						</div>
 					</div>
 				</OrderDetailsSection>
 
-				<OrderDetailsSection heading="Products:">
+				<OrderDetailsSection heading="Productos">
 					<div className="flex flex-wrap justify-center gap-2">
 						{order.products.map(p => (
 							<Link key={p._id} to={`/products/${p.productID._id}`}>
@@ -64,7 +64,7 @@ export default function OrderDetailsPage() {
 						))}
 					</div>
 					<div className="text-center space-y-2">
-						<h3 className="text-xl mt-10">Total Amount:</h3>
+						<h3 className="text-xl mt-10">Monto total:</h3>
 						<p className="text-2xl font-light">${order.amount}</p>
 					</div>
 				</OrderDetailsSection>
@@ -74,7 +74,7 @@ export default function OrderDetailsPage() {
 				onClick={history.goBack}
 				className="absolute -top-12 -left-4 text-lg" 
 				secondary
-			><ChevronLeft className="mr-2" /> Back
+			><ChevronLeft className="mr-2" /> Atras
 			</Button>
 		</main>
 	)

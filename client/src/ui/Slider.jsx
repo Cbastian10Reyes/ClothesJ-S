@@ -37,7 +37,7 @@ export default function Slider({ slides }) {
             )}>
             	<h2 className="text-4xl sm:text-6xl font-bold mb-10">{slide.title}</h2>
             	<p className="text-xl mb-10">{slide.desc}</p>
-            	<Button className="text-xl w-1/2" light>Shop now</Button>
+            	<Button className="text-xl w-1/2" light>Compra ahora</Button>
             </div>
           </>)}
         </div>

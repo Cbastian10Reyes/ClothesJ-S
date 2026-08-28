@@ -1,214 +1,693 @@
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:5000/api"
 
-function setAccessToken(token) {
-  localStorage.setItem('token', token)
-}
-function getAccessToken() {
-  return localStorage.getItem('token')
-}
+/**
+ * Ejecuta una petición HTTP contra el backend.
+ */
+async function request(endpoint, options = {}) {
+  try {
+    const response = await fetch(
+      `${API_URL}${endpoint}`,
+      options
+    )
 
-function setUser(user) {
-  localStorage.setItem('user', JSON.stringify(user))
-}
-function getUser() {
-  const user = localStorage.getItem('user')
-  return user ? JSON.parse(user) : null
-}
+    let data = null
 
-async function registerUser({fullname, email, password}) {
-  const resp = await fetch(API_URL+"/auth/register", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({fullname, email, password}),
-  })
-  return await resp.json()
-}
+    const contentType =
+      response.headers.get("content-type")
 
-async function loginUser({email, password}) {
-  const resp = await fetch(API_URL+"/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({email, password}),
-  })
-  const data = await resp.json()
-
-  if (data.accessToken) {
-    setAccessToken(data.accessToken)
-    await fetchUserDetails()
-  }
-  return data
-}
-
-function logoutUser() {
-  localStorage.clear()
-}
-
-async function createUserCart(products) {
-  const resp = await fetch(API_URL+"/carts", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-access-token": getAccessToken(),
-    },
-    body: JSON.stringify(products.length ? {products}: {}),
-  })
-  return await resp.json()
-}
-
-async function getUserCart() {
-  const userID = getUser()._id
-  const resp = await fetch(API_URL+"/carts/"+userID, {
-    headers: {
-      "x-access-token": getAccessToken(),
+    if (
+      contentType?.includes(
+        "application/json"
+      )
+    ) {
+      data = await response.json()
     }
-  })
-  const cart = await resp.json()
-  if (cart.products) {
-    cart.products = cart.products.map(product => (
-      {
-        id: product.productID._id,
-        title: product.productID.title,
-        price: product.productID.price,
-        image: product.productID.image,
-        quantity: product.quantity,
+
+    if (!response.ok) {
+      return {
+        status: "error",
+        statusCode: response.status,
+        message:
+          data?.message ||
+          data?.error ||
+          "Error al realizar la petición",
+        code: data?.code || null,
+        data,
       }
-    ))
+    }
+
+    return data
+  } catch (error) {
+    console.error(
+      "API request error:",
+      error
+    )
+
+    return {
+      status: "error",
+      statusCode: 500,
+      message:
+        "No fue posible conectar con el servidor",
+      code: "NETWORK_ERROR",
+    }
   }
-  return cart
 }
 
-async function addProductsToCart(products) {
-  const userID = getUser()._id
-  const resp = await fetch(API_URL+"/carts/"+userID, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "x-access-token": getAccessToken(),
-    },
-    body: JSON.stringify({products}),
-  })
-  return await resp.json()
+/* =========================================================
+   CATEGORIES
+========================================================= */
+
+/**
+ * Obtener todas las categorías.
+ *
+ * GET /categories
+ */
+async function fetchCategories() {
+  return request("/categories")
 }
 
-async function removeProductFromCart(productID) {
-  return await patchCart(productID, 0)
+/**
+ * Obtener una categoría por ID.
+ *
+ * GET /categories/:id
+ */
+async function fetchCategory(id) {
+  if (!id) {
+    return {
+      status: "error",
+      message:
+        "Category id is required",
+    }
+  }
+
+  return request(
+    `/categories/${id}`
+  )
 }
 
-async function patchCart(productID, quantity) {
-  const userID = getUser()._id
-  const resp = await fetch(API_URL+"/carts/"+userID, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "x-access-token": getAccessToken(),
-    },
-    body: JSON.stringify({productID, quantity}),
-  })
-  return await resp.json()
-}
-
-async function clearCart() {
-  const resp = await fetch(API_URL+"/carts/clear", {
+/**
+ * Crear una categoría.
+ *
+ * POST /categories
+ */
+async function createCategory(
+  category
+) {
+  return request("/categories", {
     method: "POST",
     headers: {
-      "x-access-token": getAccessToken(),
+      "Content-Type":
+        "application/json",
     },
+    body: JSON.stringify(
+      category
+    ),
   })
-  return await resp.json()
 }
 
-async function fetchUserDetails() {
-  const resp =  await fetch(API_URL+"/users/me", {
-    headers: {
-      "x-access-token": getAccessToken(),
+/**
+ * Actualizar una categoría.
+ *
+ * PATCH /categories/:id
+ */
+async function updateCategory(
+  id,
+  category
+) {
+  if (!id) {
+    return {
+      status: "error",
+      message:
+        "Category id is required",
     }
-  })
-  const {status, user} = await resp.json()
-  if (status == "ok") {
-    if (!user.avatarSrc) {
-      user.avatarSrc = `https://avatars.dicebear.com/api/initials/${user.fullname}.svg`
-    }
-    setUser(user)
   }
-  return {status, user}
+
+  return request(
+    `/categories/${id}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify(
+        category
+      ),
+    }
+  )
 }
 
-async function fetchProducts(category, newArrivals=false) {
-  let query = `new=${newArrivals ? "true" : "false"}${category ? "&category="+category : ""}`
-  const resp = await fetch(API_URL+"/products?"+query)
-  return await resp.json()
+/**
+ * Eliminar una categoría.
+ *
+ * DELETE /categories/:id
+ */
+async function deleteCategory(id) {
+  if (!id) {
+    return {
+      status: "error",
+      message:
+        "Category id is required",
+    }
+  }
+
+  return request(
+    `/categories/${id}`,
+    {
+      method: "DELETE",
+    }
+  )
 }
+
+/* =========================================================
+   PRODUCTS
+========================================================= */
+
+/**
+ * Obtener productos.
+ *
+ * GET /products
+ *
+ * Filtros soportados:
+ *
+ * {
+ *   brand,
+ *   category,
+ *   gender,
+ *   isFeatured
+ * }
+ */
+async function fetchProducts(
+  filters = {}
+) {
+  const params =
+    new URLSearchParams()
+
+  if (filters.brand) {
+    params.append(
+      "brand",
+      filters.brand
+    )
+  }
+
+  if (filters.category) {
+    params.append(
+      "category",
+      filters.category
+    )
+  }
+
+  if (filters.gender) {
+    params.append(
+      "gender",
+      filters.gender
+    )
+  }
+
+  if (
+    filters.isFeatured !==
+    undefined
+  ) {
+    params.append(
+      "isFeatured",
+      String(
+        filters.isFeatured
+      )
+    )
+  }
+
+  const query =
+    params.toString()
+
+  const endpoint = query
+    ? `/products?${query}`
+    : "/products"
+
+  return request(endpoint)
+}
+
+/**
+ * Obtener producto por ID.
+ *
+ * GET /products/:id
+ */
 async function fetchProduct(id) {
-  const resp = await fetch(API_URL+"/products/"+id)
-  return await resp.json()
+  if (!id) {
+    return {
+      status: "error",
+      message:
+        "Product id is required",
+    }
+  }
+
+  return request(
+    `/products/${id}`
+  )
 }
 
-async function proceedCheckout() {
-  const resp = await fetch(API_URL+"/checkout/payment", {
-    headers: {
-      "Content-Type": "application/json",
-      "x-access-token": getAccessToken(),
-    },
-  })
-  return await resp.json()
+/**
+ * Crear producto.
+ *
+ * POST /products
+ */
+async function createProduct(
+  product,
+  images = []
+) {
+  const formData =
+    buildProductFormData(
+      product,
+      images
+    )
+
+  return request(
+    "/products",
+    {
+      method: "POST",
+      body: formData,
+    }
+  )
 }
 
-// on production create the order using stripe webhooks
-async function createOrder(products, amount, address) {
-  const resp = await fetch(API_URL+"/orders", {
+/**
+ * Actualizar producto.
+ *
+ * PATCH /products/:id
+ */
+async function updateProduct(
+  id,
+  product,
+  images = []
+) {
+  if (!id) {
+    return {
+      status: "error",
+      message:
+        "Product id is required",
+    }
+  }
+
+  const formData =
+    buildProductFormData(
+      product,
+      images
+    )
+
+  return request(
+    `/products/${id}`,
+    {
+      method: "PATCH",
+      body: formData,
+    }
+  )
+}
+
+/**
+ * Eliminar producto.
+ *
+ * DELETE /products/:id
+ */
+async function deleteProduct(id) {
+  if (!id) {
+    return {
+      status: "error",
+      message:
+        "Product id is required",
+    }
+  }
+
+  return request(
+    `/products/${id}`,
+    {
+      method: "DELETE",
+    }
+  )
+}
+
+/* =========================================================
+   ORDERS
+========================================================= */
+
+/**
+ * Crear una orden.
+ *
+ * POST /orders
+ *
+ * El backend espera:
+ *
+ * {
+ *   customer: {
+ *     name,
+ *     phone,
+ *     email?,
+ *     city?,
+ *     address?,
+ *     notes?
+ *   },
+ *   items: [
+ *     {
+ *       productId,
+ *       variantId,
+ *       quantity
+ *     }
+ *   ]
+ * }
+ *
+ * Los precios, descuentos, subtotales
+ * y total son calculados por el backend.
+ */
+async function createOrder(
+  order
+) {
+  if (
+    !order ||
+    !order.customer ||
+    !Array.isArray(
+      order.items
+    ) ||
+    order.items.length === 0
+  ) {
+    return {
+      status: "error",
+      message:
+        "Order data is required",
+      code:
+        "INVALID_ORDER_DATA",
+    }
+  }
+
+  return request("/orders", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      "x-access-token": getAccessToken(),
+      "Content-Type":
+        "application/json",
     },
-    body: JSON.stringify({ 
-      products: products.map(p => ({productID: p.id, quantity: p.quantity})), 
-      amount, 
-      address 
-    }),
+    body: JSON.stringify(
+      order
+    ),
   })
-  return await resp.json()
 }
 
-async function fetchAllOrders() {
-  const userID = getUser()._id
-  const resp = await fetch(API_URL+"/orders/user/"+userID, {
-    headers: {
-      "x-access-token": getAccessToken(),
+/* =========================================================
+   PRODUCT FORM DATA
+========================================================= */
+
+/**
+ * Construye el FormData utilizado
+ * para crear y actualizar productos.
+ *
+ * Soporta:
+ *
+ * {
+ *   name,
+ *   description,
+ *   gender,
+ *   category,
+ *   brand,
+ *   variants,
+ *   discount,
+ *   isActive,
+ *   isFeatured
+ * }
+ */
+function buildProductFormData(
+  product,
+  images = []
+) {
+  const formData =
+    new FormData()
+
+  if (
+    product.name !==
+    undefined
+  ) {
+    formData.append(
+      "name",
+      product.name
+    )
+  }
+
+  if (
+    product.description !==
+    undefined
+  ) {
+    formData.append(
+      "description",
+      product.description
+    )
+  }
+
+  if (
+    product.gender !==
+    undefined
+  ) {
+    formData.append(
+      "gender",
+      product.gender
+    )
+  }
+
+  if (
+    product.category !==
+    undefined
+  ) {
+    formData.append(
+      "category",
+      product.category
+    )
+  }
+
+  if (
+    product.brand !==
+    undefined
+  ) {
+    formData.append(
+      "brand",
+      product.brand ?? ""
+    )
+  }
+
+  if (
+    product.variants !==
+    undefined
+  ) {
+    formData.append(
+      "variants",
+      JSON.stringify(
+        product.variants
+      )
+    )
+  }
+
+  if (
+    product.discount !==
+    undefined
+  ) {
+    formData.append(
+      "discount",
+      String(
+        product.discount
+      )
+    )
+  }
+
+  if (
+    product.isActive !==
+    undefined
+  ) {
+    formData.append(
+      "isActive",
+      String(
+        product.isActive
+      )
+    )
+  }
+
+  if (
+    product.isFeatured !==
+    undefined
+  ) {
+    formData.append(
+      "isFeatured",
+      String(
+        product.isFeatured
+      )
+    )
+  }
+
+  images.forEach(
+    (image) => {
+      formData.append(
+        "images",
+        image
+      )
     }
-  })
-  return await resp.json()
+  )
+
+  return formData
 }
 
-async function fetchOrderDetails(orderID) {
-  const resp = await fetch(API_URL+"/orders/"+orderID, {
-    headers: {
-      "x-access-token": getAccessToken(),
-    }
-  })
-  return await resp.json()
+/* =========================================================
+   HELPERS
+========================================================= */
+
+/**
+ * Obtiene la imagen principal
+ * de un producto.
+ */
+function getProductPrimaryImage(
+  product
+) {
+  if (
+    !product?.images?.length
+  ) {
+    return null
+  }
+
+  const primaryImage =
+    product.images.find(
+      (image) =>
+        image.isPrimary
+    )
+
+  return (
+    primaryImage?.url ||
+    product.images[0]?.url ||
+    null
+  )
 }
+
+/**
+ * Obtiene el precio mínimo
+ * de un producto entre todas
+ * sus variantes.
+ */
+function getProductMinPrice(
+  product
+) {
+  if (
+    !product?.variants?.length
+  ) {
+    return 0
+  }
+
+  return Math.min(
+    ...product.variants.map(
+      (variant) =>
+        Number(
+          variant.price
+        ) || 0
+    )
+  )
+}
+
+/**
+ * Obtiene el precio máximo
+ * de un producto entre todas
+ * sus variantes.
+ */
+function getProductMaxPrice(
+  product
+) {
+  if (
+    !product?.variants?.length
+  ) {
+    return 0
+  }
+
+  return Math.max(
+    ...product.variants.map(
+      (variant) =>
+        Number(
+          variant.price
+        ) || 0
+    )
+  )
+}
+
+/**
+ * Obtiene el stock total
+ * del producto.
+ */
+function getProductStock(
+  product
+) {
+  if (
+    !product?.variants?.length
+  ) {
+    return 0
+  }
+
+  return product.variants.reduce(
+    (
+      total,
+      variant
+    ) =>
+      total +
+      (Number(
+        variant.stock
+      ) || 0),
+    0
+  )
+}
+
+/**
+ * Calcula el precio final
+ * de una variante aplicando
+ * el descuento del producto.
+ */
+function getProductFinalPrice(
+  product,
+  variant
+) {
+  const price =
+    Number(
+      variant?.price
+    ) || 0
+
+  const discount =
+    Number(
+      product?.discount
+    ) || 0
+
+  if (
+    discount <= 0
+  ) {
+    return price
+  }
+
+  return Math.round(
+    price -
+      (price *
+        discount) /
+        100
+  )
+}
+
+/* =========================================================
+   EXPORT
+========================================================= */
 
 export default {
-  registerUser,
-  loginUser,
-  logoutUser,
-  getUser,
-  fetchUserDetails,
+  fetchCategories,
+  fetchCategory,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+
   fetchProducts,
   fetchProduct,
-  createUserCart,
-  getUserCart,
-  addProductsToCart,
-  removeProductFromCart,
-  patchCart,
-  clearCart,
-  proceedCheckout,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+
   createOrder,
-  fetchAllOrders,
-  fetchOrderDetails,
+
+  getProductPrimaryImage,
+  getProductMinPrice,
+  getProductMaxPrice,
+  getProductStock,
+  getProductFinalPrice,
 }
