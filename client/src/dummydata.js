@@ -1,19 +1,11 @@
 export const sliderItems = [
   {
     id: 1,
-    image: "https://images.pexels.com/photos/14555652/pexels-photo-14555652.jpeg?auto=compress&cs=tinysrgb&dpr=3&h=750&w=1260",
+    image: "https://res.cloudinary.com/tyskxzn2/image/upload/v1789766099/e2b992fc-ea07-4951-bd6f-6dac02316b81.jpg",
     title: "OFERTAS DENIMS",
     desc: "Por lanzamiento 15% de descuento en toda la tienda.",
     bg: "f5fafd",
     categoryId: "6a8c7515ed5e69696954ae0c"
-  },
-  {
-    id: 2,
-    image: "https://images.pexels.com/photos/8851053/pexels-photo-8851053.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-    title: "CAMISETAS Y SACOS",
-    desc: "Por lanzamiento 15% de descuento en toda la tienda.",
-    bg: "fcf1ed",
-    categoryId: "6a8c9e1859888543ab70f861"
   },
   {
     id: 3,
