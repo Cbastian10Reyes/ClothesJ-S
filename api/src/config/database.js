@@ -1,7 +1,4 @@
-const dns = require("node:dns");
 const mongoose = require("mongoose");
-
-dns.setServers(["192.168.10.1"]);
 
 const connectDatabase = async () => {
   try {

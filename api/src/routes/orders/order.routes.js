@@ -1,4 +1,5 @@
 const express = require("express");
+const requireAdmin = require("../../middlewares/requireAdmin");
 
 const orderController = require("../../controllers/orders/order.controller");
 
@@ -6,12 +7,14 @@ const router = express.Router();
 
 router.post("/", orderController.createOrder);
 
-router.get("/", orderController.getOrders);
+router.get("/", requireAdmin, orderController.getOrders);
 
-router.get("/:id", orderController.getOrderById);
+router.get("/:id", requireAdmin, orderController.getOrderById);
 
-router.patch("/:id/status",orderController.updateOrderStatus);
+router.patch("/:id/status",requireAdmin, orderController.updateOrderStatus);
 
-router.patch("/:id/whatsapp",orderController.markWhatsappSent);
+router.patch("/:id/whatsapp", requireAdmin, orderController.markWhatsappSent);
+
+router.get("/:id/invoice", requireAdmin, orderController.downloadInvoice);
 
 module.exports = router;

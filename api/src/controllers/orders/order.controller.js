@@ -80,10 +80,49 @@ const markWhatsappSent = async (req, res, next) => {
   }
 };
 
+const downloadInvoice = async (req, res, next) => {
+  try {
+    const pdfBuffer =
+      await orderService.generateOrderInvoice(
+        req.params.id
+      );
+
+    const order =
+      await orderService.getOrderById(
+        req.params.id
+      );
+
+    const fileName =
+      `Factura-${order.orderNumber}.pdf`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/pdf"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName}"`
+    );
+
+    res.setHeader(
+      "Content-Length",
+      pdfBuffer.length
+    );
+
+    return res.status(200).send(
+      pdfBuffer
+    );
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getOrders,
   getOrderById,
   updateOrderStatus,
   markWhatsappSent,
+  downloadInvoice,
 };

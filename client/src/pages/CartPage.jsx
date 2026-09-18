@@ -56,6 +56,49 @@ export default function CartPage() {
   const { cart, cartDispatch } =
     useContext(CartContext)
 
+  const subtotal = cart.products.reduce(
+    (total, product) => {
+      const originalPrice =
+        Number(product.originalPrice) ||
+        Number(
+          product.selectedVariant?.price
+        ) ||
+        0
+  
+      const quantity =
+        Number(product.quantity) || 1
+  
+      return (
+        total +
+        originalPrice * quantity
+      )
+    },
+    0
+  )
+  
+  const total = cart.products.reduce(
+    (total, product) => {
+      const finalPrice =
+        Number(product.finalPrice) ||
+        Number(
+          product.selectedVariant?.price
+        ) ||
+        0
+  
+      const quantity =
+        Number(product.quantity) || 1
+  
+      return (
+        total +
+        finalPrice * quantity
+      )
+    },
+    0
+  )
+  
+  const discountTotal =
+  subtotal - total
+
   const setProductQuantity = (
     productId,
     variantId,
@@ -241,7 +284,6 @@ export default function CartPage() {
 
       sendOrderToWhatsApp(
         cart.products,
-        createdOrder.total,
         createdOrder.orderNumber
       )
     } catch (error) {
@@ -348,9 +390,9 @@ export default function CartPage() {
             onCheckout={
               openCheckoutModal
             }
-            subtotal={cart.total}
-            charges={[]}
-            discounts={[]}
+            subtotal={subtotal}
+            discountTotal={discountTotal}
+            total={total}
           />
 
         </section>

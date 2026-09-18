@@ -254,7 +254,8 @@ async function fetchProduct(id) {
  */
 async function createProduct(
   product,
-  images = []
+  images = [],
+  token
 ) {
   const formData =
     buildProductFormData(
@@ -266,6 +267,9 @@ async function createProduct(
     "/products",
     {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       body: formData,
     }
   )
@@ -279,13 +283,13 @@ async function createProduct(
 async function updateProduct(
   id,
   product,
-  images = []
+  images = [],
+  token
 ) {
   if (!id) {
     return {
       status: "error",
-      message:
-        "Product id is required",
+      message: "Product id is required",
     }
   }
 
@@ -299,6 +303,9 @@ async function updateProduct(
     `/products/${id}`,
     {
       method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       body: formData,
     }
   )
@@ -309,12 +316,14 @@ async function updateProduct(
  *
  * DELETE /products/:id
  */
-async function deleteProduct(id) {
+async function deleteProduct(
+  id,
+  token
+) {
   if (!id) {
     return {
       status: "error",
-      message:
-        "Product id is required",
+      message: "Product id is required",
     }
   }
 
@@ -322,6 +331,9 @@ async function deleteProduct(id) {
     `/products/${id}`,
     {
       method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     }
   )
 }
@@ -388,6 +400,184 @@ async function createOrder(
       order
     ),
   })
+}
+
+async function fetchOrders(token) {
+  return request("/orders", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+}
+
+async function fetchOrder(
+  id,
+  token
+) {
+  if (!id) {
+    return {
+      status: "error",
+      message: "Order id is required",
+    }
+  }
+
+  return request(
+    `/orders/${id}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
+}
+
+async function updateOrderStatus(
+  id,
+  status,
+  token
+) {
+  if (!id) {
+    return {
+      status: "error",
+      message: "Order id is required",
+    }
+  }
+
+  if (!status) {
+    return {
+      status: "error",
+      message: "Order status is required",
+    }
+  }
+
+  return request(
+    `/orders/${id}/status`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
+      },
+
+      body: JSON.stringify({
+        status,
+      }),
+    }
+  )
+}
+
+async function markOrderWhatsappSent(
+  id,
+  token
+) {
+  if (!id) {
+    return {
+      status: "error",
+      message: "Order id is required",
+    }
+  }
+
+  return request(
+    `/orders/${id}/whatsapp`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
+      },
+
+      body: JSON.stringify({
+        whatsappSent: true,
+      }),
+    }
+  )
+}
+
+/**
+ * Descargar factura/comprobante de una orden.
+ *
+ * GET /orders/:id/invoice
+ */
+async function downloadOrderInvoice(
+  id,
+  token
+) {
+  if (!id) {
+    return {
+      status: "error",
+      message: "Order id is required",
+    }
+  }
+
+  try {
+    const response = await fetch(
+      `${API_URL}/orders/${id}/invoice`,
+      {
+        method: "GET",
+        headers: {
+          Authorization:
+            `Bearer ${token}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      let errorData = null
+
+      const contentType =
+        response.headers.get(
+          "content-type"
+        )
+
+      if (
+        contentType?.includes(
+          "application/json"
+        )
+      ) {
+        errorData =
+          await response.json()
+      }
+
+      return {
+        status: "error",
+        statusCode:
+          response.status,
+        message:
+          errorData?.message ||
+          "No fue posible generar la factura.",
+        code:
+          errorData?.code ||
+          null,
+      }
+    }
+
+    const blob =
+      await response.blob()
+
+    return {
+      success: true,
+      blob,
+    }
+  } catch (error) {
+    console.error(
+      "Download invoice error:",
+      error
+    )
+
+    return {
+      status: "error",
+      statusCode: 500,
+      message:
+        "No fue posible descargar la factura.",
+      code: "NETWORK_ERROR",
+    }
+  }
 }
 
 /* =========================================================
@@ -666,6 +856,27 @@ function getProductFinalPrice(
   )
 }
 
+function loginAdmin(email, password) {
+  if (!email || !password) {
+    return {
+      status: "error",
+      message: "Email and password are required",
+      code: "INVALID_LOGIN_DATA",
+    }
+  }
+
+  return request("/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email,
+      password,
+    }),
+  })
+}
+
 /* =========================================================
    EXPORT
 ========================================================= */
@@ -684,10 +895,17 @@ export default {
   deleteProduct,
 
   createOrder,
+  fetchOrders,
+  fetchOrder,
+  updateOrderStatus,
+  markOrderWhatsappSent,
+
+  downloadOrderInvoice,
 
   getProductPrimaryImage,
   getProductMinPrice,
   getProductMaxPrice,
   getProductStock,
   getProductFinalPrice,
+  loginAdmin,
 }

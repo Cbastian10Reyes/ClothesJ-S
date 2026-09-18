@@ -44,6 +44,9 @@ export default function ProductDetailsPage() {
   const [selectedSize, setSelectedSize] =
     useState("")
 
+  const [quantity, setQuantity] =
+    useState(1)
+
   const [currentImageIndex, setCurrentImageIndex] =
     useState(0)
 
@@ -196,6 +199,7 @@ export default function ProductDetailsPage() {
   const handleSelectColor = (color) => {
     setSelectedColor(color)
     setSelectedSize("")
+	setQuantity(1)
   }
 
   const handleSelectSize = (size) => {
@@ -210,6 +214,31 @@ export default function ProductDetailsPage() {
     }
 
     setSelectedSize(size)
+	setQuantity(1)
+  }
+
+  const decreaseQuantity = () => {
+    setQuantity(
+      (currentQuantity) =>
+        Math.max(
+          1,
+          currentQuantity - 1
+        )
+    )
+  }
+  
+  const increaseQuantity = () => {
+    if (!selectedVariant) {
+      return
+    }
+  
+    setQuantity(
+      (currentQuantity) =>
+        Math.min(
+          currentQuantity + 1,
+          selectedVariant.stock
+        )
+    )
   }
 
   const nextImage = () => {
@@ -275,7 +304,7 @@ export default function ProductDetailsPage() {
 
           discount,
 
-          quantity: 1,
+          quantity,
         },
       ],
     })
@@ -291,196 +320,206 @@ export default function ProductDetailsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 py-12 px-6 max-w-7xl mx-auto">
 
         {/* GALERÍA DE IMÁGENES */}
-        <section className="relative flex items-center justify-center overflow-hidden rounded-2xl bg-gray-100">
-
-          {/* DESCUENTO */}
-          {hasDiscount && (
-            <div
-              className="
-                absolute top-5 right-5 z-20
-                bg-red-600 text-white
-                px-4 py-2
-                rounded-lg
-                font-bold
-                shadow-lg
-              "
-            >
-              -{discount}%
-            </div>
-          )}
-
-          {productImages.length > 0 ? (
-            <>
-              <img
+        <section className="flex items-start justify-center">
+    <div
+      className="
+        relative
+        w-full
+        max-w-[480px]
+        overflow-hidden
+        rounded-2xl
+        bg-gray-100
+      "
+    >
+  
+            {/* DESCUENTO */}
+            {hasDiscount && (
+              <div
                 className="
-                  w-full
-                  h-full
-                  max-h-[700px]
-                  object-cover
-                  transition-opacity
-                  duration-300
+                  absolute top-5 right-5 z-20
+                  bg-red-600 text-white
+                  px-4 py-2
+                  rounded-lg
+                  font-bold
+                  shadow-lg
                 "
-                src={
-                  productImages[
-                    currentImageIndex
-                  ]?.url
-                }
-                alt={`${product.name} ${
-                  currentImageIndex + 1
-                }`}
-              />
-
-              {/* FLECHA IZQUIERDA */}
-              {productImages.length > 1 && (
-                <button
-                  type="button"
-                  onClick={previousImage}
-                  aria-label="Imagen anterior"
-                  className="
-                    absolute
-                    left-4
-                    top-1/2
-                    transform
-                    -translate-y-1/2
-                    z-20
-                    w-12 h-12
-                    flex
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-black/50
-                    text-white
-                    shadow-lg
-                    transition-all
-                    duration-200
-                    hover:(bg-black/75 scale-105)
-                    focus:outline-none
-                  "
-                >
-                  <ChevronLeft
-                    width={30}
-                    height={30}
+              >
+                -{discount}%
+              </div>
+            )}
+  
+            {productImages.length > 0 ? (
+              <>
+                <img
+                    className="
+                      w-full
+                      max-h-[540px]
+                      object-contain
+                      transition-opacity
+                      duration-300
+                    "
+                    src={
+                      productImages[
+                        currentImageIndex
+                      ]?.url
+                    }
+                    alt={`${product.name} ${
+                      currentImageIndex + 1
+                    }`}
                   />
-                </button>
-              )}
-
-              {/* FLECHA DERECHA */}
-              {productImages.length > 1 && (
-                <button
-                  type="button"
-                  onClick={nextImage}
-                  aria-label="Siguiente imagen"
-                  className="
-                    absolute
-                    right-4
-                    top-1/2
-                    transform
-                    -translate-y-1/2
-                    z-20
-                    w-12 h-12
-                    flex
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-black/50
-                    text-white
-                    shadow-lg
-                    transition-all
-                    duration-200
-                    hover:(bg-black/75 scale-105)
-                    focus:outline-none
-                  "
-                >
-                  <ChevronRight
-                    width={30}
-                    height={30}
-                  />
-                </button>
-              )}
-
-              {/* INDICADORES */}
-              {productImages.length > 1 && (
-                <div
-                  className="
-                    absolute
-                    bottom-5
-                    left-1/2
-                    transform
-                    -translate-x-1/2
-                    z-20
-                    flex
-                    items-center
-                    gap-2
-                    bg-black/30
-                    rounded-full
-                    px-3
-                    py-2
-                  "
-                >
-                  {productImages.map(
-                    (image, index) => (
-                      <button
-                        key={
-                          image.publicId ||
-                          index
-                        }
-                        type="button"
-                        aria-label={`Ver imagen ${
-                          index + 1
-                        }`}
-                        onClick={() =>
-                          setCurrentImageIndex(
+  
+                {/* FLECHA IZQUIERDA */}
+                {productImages.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={previousImage}
+                    aria-label="Imagen anterior"
+                    className="
+                      absolute
+                      left-4
+                      top-1/2
+                      transform
+                      -translate-y-1/2
+                      z-20
+                      w-12 h-12
+                      flex
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-black/50
+                      text-white
+                      shadow-lg
+                      transition-all
+                      duration-200
+                      hover:(bg-black/75 scale-105)
+                      focus:outline-none
+                    "
+                  >
+                    <ChevronLeft
+                      width={30}
+                      height={30}
+                    />
+                  </button>
+                )}
+  
+                {/* FLECHA DERECHA */}
+                {productImages.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={nextImage}
+                    aria-label="Siguiente imagen"
+                    className="
+                      absolute
+                      right-4
+                      top-1/2
+                      transform
+                      -translate-y-1/2
+                      z-20
+                      w-12 h-12
+                      flex
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-black/50
+                      text-white
+                      shadow-lg
+                      transition-all
+                      duration-200
+                      hover:(bg-black/75 scale-105)
+                      focus:outline-none
+                    "
+                  >
+                    <ChevronRight
+                      width={30}
+                      height={30}
+                    />
+                  </button>
+                )}
+  
+                {/* INDICADORES */}
+                {productImages.length > 1 && (
+                  <div
+                    className="
+                      absolute
+                      bottom-5
+                      left-1/2
+                      transform
+                      -translate-x-1/2
+                      z-20
+                      flex
+                      items-center
+                      gap-2
+                      bg-black/30
+                      rounded-full
+                      px-3
+                      py-2
+                    "
+                  >
+                    {productImages.map(
+                      (image, index) => (
+                        <button
+                          key={
+                            image.publicId ||
                             index
-                          )
-                        }
-                        className={`
-                          h-2.5
-                          rounded-full
-                          transition-all
-                          duration-200
-                          focus:outline-none
-
-                          ${
-                            currentImageIndex ===
-                            index
-                              ? "w-7 bg-white"
-                              : "w-2.5 bg-white/60 hover:bg-white"
                           }
-                        `}
-                      />
-                    )
-                  )}
-                </div>
-              )}
-
-              {/* CONTADOR */}
-              {productImages.length > 1 && (
-                <div
-                  className="
-                    absolute
-                    bottom-5
-                    right-5
-                    z-20
-                    bg-black/50
-                    text-white
-                    text-sm
-                    px-3
-                    py-1
-                    rounded-full
-                  "
-                >
-                  {currentImageIndex + 1}
-                  {" / "}
-                  {productImages.length}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="h-96 w-full flex items-center justify-center text-gray-400">
-              Imagen no disponible
-            </div>
-          )}
-
+                          type="button"
+                          aria-label={`Ver imagen ${
+                            index + 1
+                          }`}
+                          onClick={() =>
+                            setCurrentImageIndex(
+                              index
+                            )
+                          }
+                          className={`
+                            h-2.5
+                            rounded-full
+                            transition-all
+                            duration-200
+                            focus:outline-none
+  
+                            ${
+                              currentImageIndex ===
+                              index
+                                ? "w-7 bg-white"
+                                : "w-2.5 bg-white/60 hover:bg-white"
+                            }
+                          `}
+                        />
+                      )
+                    )}
+                  </div>
+                )}
+  
+                {/* CONTADOR */}
+                {productImages.length > 1 && (
+                  <div
+                    className="
+                      absolute
+                      bottom-5
+                      right-5
+                      z-20
+                      bg-black/50
+                      text-white
+                      text-sm
+                      px-3
+                      py-1
+                      rounded-full
+                    "
+                  >
+                    {currentImageIndex + 1}
+                    {" / "}
+                    {productImages.length}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="h-96 w-full flex items-center justify-center text-gray-400">
+                Imagen no disponible
+              </div>
+            )}
+			</div>
+  
         </section>
 
         {/* INFORMACIÓN */}
@@ -710,6 +749,92 @@ export default function ProductDetailsPage() {
               {selectedVariant.stock === 1
                 ? "prenda"
                 : "prendas"}
+            </div>
+          )}
+		  {/* CANTIDAD */}
+          {selectedVariant && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Cantidad
+              </h3>
+          
+              <div className="flex items-center gap-4">
+          
+                <div className="inline-flex items-center border border-gray-300 rounded-lg overflow-hidden">
+          
+                  <button
+                    type="button"
+                    onClick={decreaseQuantity}
+                    disabled={quantity <= 1}
+                    className={`
+                      w-12 h-12
+                      flex items-center justify-center
+                      text-2xl
+                      transition-colors
+                      focus:outline-none
+          
+                      ${
+                        quantity > 1
+                          ? "hover:bg-gray-100 cursor-pointer"
+                          : "bg-gray-100 text-gray-300 cursor-not-allowed"
+                      }
+                    `}
+                  >
+                    −
+                  </button>
+          
+                  <span
+                    className="
+                      min-w-14
+                      h-12
+                      flex
+                      items-center
+                      justify-center
+                      border-l
+                      border-r
+                      border-gray-300
+                      text-lg
+                      font-semibold
+                    "
+                  >
+                    {quantity}
+                  </span>
+          
+                  <button
+                    type="button"
+                    onClick={increaseQuantity}
+                    disabled={
+                      quantity >=
+                      selectedVariant.stock
+                    }
+                    className={`
+                      w-12 h-12
+                      flex items-center justify-center
+                      text-2xl
+                      transition-colors
+                      focus:outline-none
+          
+                      ${
+                        quantity <
+                        selectedVariant.stock
+                          ? "hover:bg-gray-100 cursor-pointer"
+                          : "bg-gray-100 text-gray-300 cursor-not-allowed"
+                      }
+                    `}
+                  >
+                    +
+                  </button>
+          
+                </div>
+          
+                <span className="text-sm text-gray-500">
+                  Máximo:{" "}
+                  <span className="font-semibold">
+                    {selectedVariant.stock}
+                  </span>
+                </span>
+          
+              </div>
             </div>
           )}
 

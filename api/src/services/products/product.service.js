@@ -16,6 +16,32 @@ const buildSlug = (value) => {
     .replace(/^-+|-+$/g, "");
 };
 
+const buildUniqueSlug = async (name, excludeProductId = null) => {
+  const baseSlug = buildSlug(name);
+
+  let slug = baseSlug;
+  let counter = 2;
+
+  const buildQuery = () => {
+    const query = { slug };
+
+    if (excludeProductId) {
+      query._id = {
+        $ne: excludeProductId,
+      };
+    }
+
+    return query;
+  };
+
+  while (await Product.exists(buildQuery())) {
+    slug = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+
+  return slug;
+};
+
 const validateCategory = async (categoryId) => {
   if (!mongoose.Types.ObjectId.isValid(categoryId)) {
     throw new AppError(
@@ -149,19 +175,7 @@ const createProduct = async (data, images = []) => {
 
   validateVariants(data.variants);
 
-  const slug = buildSlug(name);
-
-  const existingProduct = await Product.findOne({
-    slug,
-  });
-
-  if (existingProduct) {
-    throw new AppError(
-      "Product already exists",
-      409,
-      "PRODUCT_ALREADY_EXISTS"
-    );
-  }
+  const slug = await buildUniqueSlug(name);
 
   const discount =
     data.discount !== undefined &&
@@ -304,20 +318,7 @@ const updateProduct = async (id, data, images = null) => {
       );
     }
 
-    const slug = buildSlug(name);
-
-    const duplicatedProduct = await Product.findOne({
-      _id: { $ne: id },
-      slug,
-    });
-
-    if (duplicatedProduct) {
-      throw new AppError(
-        "Product already exists",
-        409,
-        "PRODUCT_ALREADY_EXISTS"
-      );
-    }
+    const slug = await buildUniqueSlug(name, product._id);
 
     product.name = name;
     product.slug = slug;
@@ -357,6 +358,39 @@ const updateProduct = async (id, data, images = null) => {
 
   if (data.isFeatured !== undefined) {
     product.isFeatured = data.isFeatured;
+  }
+
+  if (data.gender !== undefined) {
+  const gender = data.gender?.trim();
+
+  if (!gender) {
+      throw new AppError(
+        "Product gender cannot be empty",
+        400,
+        "PRODUCT_GENDER_REQUIRED"
+      );
+    }
+    product.gender = gender;
+  }
+
+  if (data.discount !== undefined) {
+    const discount =
+      data.discount !== null &&
+      data.discount !== ""
+        ? Number(data.discount)
+        : 0;
+    if (
+      Number.isNaN(discount) ||
+      discount < 0 ||
+      discount > 100
+    ) {
+      throw new AppError(
+        "Product discount must be between 0 and 100",
+        400,
+        "INVALID_PRODUCT_DISCOUNT"
+      );
+    }
+    product.discount = discount;
   }
 
   const previousImages = [...product.images];

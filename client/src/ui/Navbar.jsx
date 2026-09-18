@@ -12,17 +12,29 @@ import {
   Search,
   X,
   ShoppingCart,
+  LogIn,
+  Settings,
 } from "react-feather"
 
 import { CartContext } from "@/App"
 
 import Input from "@/components/Input"
 
+import Button from "@/components/Button"
+
 import useClickOutside from "@/hooks/useClickOutside"
+
+import {
+  useAdminAuth,
+} from "@/context/AdminAuthContext"
 
 export default function Navbar() {
   const { cart } =
     useContext(CartContext)
+
+  const {
+    isAuthenticated,
+  } = useAdminAuth()
 
   const [showMenu, setShowMenu] =
     useState(false)
@@ -51,18 +63,22 @@ export default function Navbar() {
       )}
       ref={navbarRef}
     >
+
       {/* LOGO */}
       <div className="flex justify-between items-center md:mx-0">
+
         <Link to="/">
           <h3 className="text-medium text-2xl">
             CLOTHES J&S
           </h3>
         </Link>
+
       </div>
 
-      {/* CARRITO + MENÚ MÓVIL */}
+      {/* CARRITO + LOGIN + MENÚ MÓVIL */}
       <div className="flex items-center ml-2 space-x-4 md:order-2">
 
+        {/* CARRITO */}
         <Link
           to="/cart"
           className="relative flex items-center pr-2"
@@ -94,14 +110,50 @@ export default function Navbar() {
               {totalItems}
             </div>
           )}
+
         </Link>
 
+        {/* LOGIN / ADMIN */}
+        {isAuthenticated ? (
+          <Link
+            to="/admin/products"
+            className="hidden md:block"
+          >
+            <Button secondary>
+              <Settings
+                width={18}
+                height={18}
+                className="mr-2"
+              />
+
+              Panel admin
+            </Button>
+          </Link>
+        ) : (
+          <Link
+            to="/admin/login"
+            className="hidden md:block"
+          >
+            <Button secondary>
+              <LogIn
+                width={18}
+                height={18}
+                className="mr-2"
+              />
+
+              Iniciar sesión
+            </Button>
+          </Link>
+        )}
+
+        {/* MENÚ MÓVIL */}
         <button
           type="button"
           className="md:hidden flex items-center focus:outline-none"
           onClick={() =>
             setShowMenu(
-              (previous) => !previous
+              (previous) =>
+                !previous
             )
           }
         >
@@ -142,6 +194,7 @@ export default function Navbar() {
             setShowMenu(false)
           }
         >
+
           <NavLink to="/products?gender=Masculino">
             Hombre
           </NavLink>
@@ -153,18 +206,53 @@ export default function Navbar() {
           <NavLink to="/products">
             Todos los Productos
           </NavLink>
+
+          {/* LOGIN EN MÓVIL */}
+          <li className="md:hidden hover:text-gray-800 text-gray-700 block px-4 py-2 truncate">
+
+            {isAuthenticated ? (
+              <Link
+                to="/admin/products"
+                className="flex items-center"
+              >
+                <Settings
+                  size={20}
+                  className="mr-2"
+                />
+
+                Panel admin
+              </Link>
+            ) : (
+              <Link
+                to="/admin/login"
+                className="flex items-center"
+              >
+                <LogIn
+                  size={20}
+                  className="mr-2"
+                />
+
+                Iniciar sesión
+              </Link>
+            )}
+
+          </li>
+
         </ul>
 
         {/* BUSCADOR */}
         <div className="flex items-center order-1 md:order-2">
+
           <Input
             className="md:max-w-min bg-opacity-40"
             icon={<Search />}
             placeholder="Buscar..."
           />
+
         </div>
 
       </div>
+
     </nav>
   )
 }
@@ -175,9 +263,11 @@ function NavLink({
 }) {
   return (
     <li className="hover:text-gray-800 text-gray-700 block px-4 py-2 truncate">
+
       <Link to={to}>
         {children}
       </Link>
+
     </li>
   )
 }
