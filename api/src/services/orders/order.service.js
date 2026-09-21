@@ -443,1048 +443,409 @@ const getOrderStatusLabel = (status) => {
 const generateOrderInvoice = async (id) => {
   const order = await getOrderById(id);
 
+  /*
+   * ========================================
+   * TOTALES
+   * ========================================
+   */
+
   const originalSubtotal = order.items.reduce(
     (total, item) =>
       total +
-      Number(item.originalUnitPrice || item.unitPrice || 0) *
-        Number(item.quantity || 0),
+      Number(
+        item.originalUnitPrice ||
+          item.unitPrice ||
+          0
+      ) *
+        Number(
+          item.quantity || 0
+        ),
     0
   );
 
-  const discountTotal = Math.max(
-    originalSubtotal - Number(order.total || 0),
+  /*
+   * Total real de productos
+   * después de descuentos
+   */
+  const productsTotal = order.items.reduce(
+    (total, item) =>
+      total +
+      Number(
+        item.subtotal || 0
+      ),
     0
   );
+
+  /*
+   * Descuentos aplicados
+   */
+  const discountTotal = Math.max(
+    originalSubtotal -
+      productsTotal,
+    0
+  );
+
+  /*
+   * El total almacenado en la orden
+   * ya incluye el costo de envío.
+   *
+   * Por eso el envío se obtiene de:
+   *
+   * order.total - productsTotal
+   */
+  const shippingCost = Math.max(
+    Number(order.total || 0) -
+      productsTotal,
+    0
+  );
+
+  /*
+   * El total de la factura debe ser
+   * exactamente el total almacenado
+   * en la orden.
+   */
+  const invoiceTotal =
+    Number(
+      order.total || 0
+    );
 
   const logoPath = path.join(
     __dirname,
     "../../assets/clothes-js-logo.png"
   );
 
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({
-        size: "A4",
-        margin: 45,
-        info: {
-          Title: `Factura ${order.orderNumber}`,
-          Author: "CLOTHES J&S",
-          Subject: "Comprobante de compra",
-        },
-      });
+  return new Promise(
+    (resolve, reject) => {
+      try {
+        const doc =
+          new PDFDocument({
+            size: "A4",
+            margin: 45,
+            info: {
+              Title: `Factura ${order.orderNumber}`,
+              Author:
+                "CLOTHES J&S",
+              Subject:
+                "Comprobante de compra",
+            },
+          });
 
-      const chunks = [];
+        const chunks = [];
 
-      doc.on("data", (chunk) => {
-        chunks.push(chunk);
-      });
+        doc.on(
+          "data",
+          (chunk) => {
+            chunks.push(
+              chunk
+            );
+          }
+        );
 
-      doc.on("end", () => {
-        resolve(Buffer.concat(chunks));
-      });
+        doc.on(
+          "end",
+          () => {
+            resolve(
+              Buffer.concat(
+                chunks
+              )
+            );
+          }
+        );
 
-      doc.on("error", reject);
+        doc.on(
+          "error",
+          reject
+        );
 
-      const pageWidth = doc.page.width;
-      const contentWidth =
-        pageWidth -
-        doc.page.margins.left -
-        doc.page.margins.right;
+        const pageWidth =
+          doc.page.width;
 
-      const left = doc.page.margins.left;
-      const right =
-        pageWidth - doc.page.margins.right;
+        const contentWidth =
+          pageWidth -
+          doc.page.margins.left -
+          doc.page.margins.right;
 
-      /*
-       * ========================================
-       * COLORES
-       * ========================================
-       */
+        const left =
+          doc.page.margins.left;
 
-      const colors = {
-        text: "#111111",
-        secondary: "#666666",
-        lightText: "#777777",
-        border: "#E4E4E4",
-        lightBackground: "#F8F8F8",
-        tableHeader: "#F1F1F1",
-        accent: "#B28A55",
-        successBackground: "#EAF7EF",
-        successText: "#267447",
-        warningBackground: "#FFF5D9",
-        warningText: "#9A6A00",
-        dangerBackground: "#FDECEC",
-        dangerText: "#A83232",
-        infoBackground: "#EAF2FB",
-        infoText: "#295C91",
-      };
+        const right =
+          pageWidth -
+          doc.page.margins.right;
 
-      /*
-       * ========================================
-       * HELPERS LOCALES
-       * ========================================
-       */
+        /*
+         * ========================================
+         * COLORES
+         * ========================================
+         */
 
-      const drawLine = (y) => {
-        doc
-          .strokeColor(colors.border)
-          .lineWidth(1)
-          .moveTo(left, y)
-          .lineTo(right, y)
-          .stroke();
-      };
-
-      const drawCard = (
-        x,
-        y,
-        width,
-        height
-      ) => {
-        doc
-          .roundedRect(
-            x,
-            y,
-            width,
-            height,
-            8
-          )
-          .fillAndStroke(
-            colors.lightBackground,
-            colors.border
-          );
-      };
-
-      const drawStatusBadge = (
-        status,
-        x,
-        y
-      ) => {
-        const statusStyles = {
-          PENDING: {
-            background:
-              colors.warningBackground,
-            text:
-              colors.warningText,
-          },
-
-          CONFIRMED: {
-            background:
-              colors.infoBackground,
-            text:
-              colors.infoText,
-          },
-
-          PREPARING: {
-            background: "#F3EDFF",
-            text: "#7251A3",
-          },
-
-          SHIPPED: {
-            background: "#EBEEFF",
-            text: "#4C5EA7",
-          },
-
-          DELIVERED: {
-            background:
-              colors.successBackground,
-            text:
-              colors.successText,
-          },
-
-          CANCELLED: {
-            background:
-              colors.dangerBackground,
-            text:
-              colors.dangerText,
-          },
+        const colors = {
+          text: "#111111",
+          secondary:
+            "#666666",
+          lightText:
+            "#777777",
+          border:
+            "#E4E4E4",
+          lightBackground:
+            "#F8F8F8",
+          tableHeader:
+            "#F1F1F1",
+          accent:
+            "#B28A55",
+          successBackground:
+            "#EAF7EF",
+          successText:
+            "#267447",
+          warningBackground:
+            "#FFF5D9",
+          warningText:
+            "#9A6A00",
+          dangerBackground:
+            "#FDECEC",
+          dangerText:
+            "#A83232",
+          infoBackground:
+            "#EAF2FB",
+          infoText:
+            "#295C91",
         };
 
-        const style =
-          statusStyles[status] || {
-            background: "#EEEEEE",
-            text: colors.secondary,
-          };
-
-        doc
-          .roundedRect(
-            x,
-            y,
-            105,
-            28,
-            7
-          )
-          .fill(
-            style.background
-          );
-
-        doc
-          .fillColor(style.text)
-          .font("Helvetica-Bold")
-          .fontSize(9)
-          .text(
-            getOrderStatusLabel(
-              status
-            ).toUpperCase(),
-            x,
-            y + 9,
-            {
-              width: 105,
-              align: "center",
-            }
-          );
-      };
-
-      /*
-       * ========================================
-       * ENCABEZADO
-       * ========================================
-       */
-
-      try {
-        doc.image(
-          logoPath,
-          left,
-          40,
-          {
-            fit: [80, 80],
-            align: "center",
-            valign: "center",
-          }
-        );
-      } catch (error) {
-        console.warn(
-          "Invoice logo could not be loaded:",
-          error.message
-        );
-      }
-
-      doc
-        .fillColor(colors.text)
-        .font("Helvetica-Bold")
-        .fontSize(27)
-        .text(
-          "CLOTHES J&S",
-          left + 100,
-          49,
-          {
-            width: 280,
-          }
-        );
-
-      doc
-        .fillColor(colors.secondary)
-        .font("Helvetica")
-        .fontSize(10)
-        .text(
-          "WEAR YOUR STORY",
-          left + 101,
-          83,
-          {
-            characterSpacing: 2,
-          }
-        );
-
-      doc
-        .strokeColor(colors.accent)
-        .lineWidth(2)
-        .moveTo(
-          left + 101,
-          105
-        )
-        .lineTo(
-          left + 220,
-          105
-        )
-        .stroke();
-
-      doc
-        .fillColor(colors.secondary)
-        .font("Helvetica")
-        .fontSize(9)
-        .text(
-          "Comprobante de compra",
-          right - 150,
-          55,
-          {
-            width: 150,
-            align: "right",
-          }
-        );
-
-      doc
-        .fillColor(colors.text)
-        .font("Helvetica-Bold")
-        .fontSize(10)
-        .text(
-          order.orderNumber,
-          right - 150,
-          72,
-          {
-            width: 150,
-            align: "right",
-          }
-        );
-
-      drawLine(130);
-
-      /*
-       * ========================================
-       * FACTURA + ESTADO
-       * ========================================
-       */
-
-      doc
-        .fillColor(colors.text)
-        .font("Helvetica-Bold")
-        .fontSize(24)
-        .text(
-          "COMPROBANTE",
-          left,
-          153
-        );
-
-      doc
-        .fontSize(13)
-        .text(
-          order.orderNumber,
-          left,
-          186
-        );
-
-      doc
-        .fillColor(colors.secondary)
-        .font("Helvetica")
-        .fontSize(9)
-        .text(
-          `Fecha: ${formatDate(
-            order.createdAt
-          )}`,
-          left,
-          208
-        );
-
-      doc
-        .fillColor(colors.secondary)
-        .font("Helvetica")
-        .fontSize(8)
-        .text(
-          "ESTADO DEL PEDIDO",
-          right - 110,
-          158,
-          {
-            width: 110,
-            align: "center",
-          }
-        );
-
-      drawStatusBadge(
-        order.status,
-        right - 108,
-        178
-      );
-
-      /*
-       * ========================================
-       * CARDS CLIENTE Y PEDIDO
-       * ========================================
-       */
-
-      const cardsY = 245;
-      const cardGap = 15;
-
-      const cardWidth =
-        (contentWidth -
-          cardGap) /
-        2;
-
-      const cardHeight = 150;
-
-      drawCard(
-        left,
-        cardsY,
-        cardWidth,
-        cardHeight
-      );
-
-      drawCard(
-        left +
-          cardWidth +
-          cardGap,
-        cardsY,
-        cardWidth,
-        cardHeight
-      );
-
-      /*
-       * CLIENTE
-       */
-
-      doc
-        .fillColor(colors.text)
-        .font("Helvetica-Bold")
-        .fontSize(11)
-        .text(
-          "INFORMACIÓN DEL CLIENTE",
-          left + 15,
-          cardsY + 16
-        );
-
-      const clientX =
-        left + 15;
-
-      let clientY =
-        cardsY + 42;
-
-      const writeClientRow = (
-        label,
-        value
-      ) => {
-        doc
-          .fillColor(colors.secondary)
-          .font("Helvetica")
-          .fontSize(8)
-          .text(
-            label,
-            clientX,
-            clientY
-          );
-
-        doc
-          .fillColor(colors.text)
-          .font("Helvetica-Bold")
-          .fontSize(9)
-          .text(
-            value || "-",
-            clientX + 62,
-            clientY,
-            {
-              width:
-                cardWidth -
-                87,
-            }
-          );
-
-        clientY += 20;
-      };
-
-      writeClientRow(
-        "Nombre:",
-        order.customer?.name
-      );
-
-      writeClientRow(
-        "Teléfono:",
-        order.customer?.phone
-      );
-
-      writeClientRow(
-        "Correo:",
-        order.customer?.email
-      );
-
-      writeClientRow(
-        "Ciudad:",
-        order.customer?.city
-      );
-
-      writeClientRow(
-        "Dirección:",
-        order.customer?.address
-      );
-
-      /*
-       * PEDIDO
-       */
-
-      const orderCardX =
-        left +
-        cardWidth +
-        cardGap +
-        15;
-
-      let orderCardY =
-        cardsY + 42;
-
-      doc
-        .fillColor(colors.text)
-        .font("Helvetica-Bold")
-        .fontSize(11)
-        .text(
-          "INFORMACIÓN DEL PEDIDO",
-          orderCardX,
-          cardsY + 16
-        );
-
-      const writeOrderRow = (
-        label,
-        value
-      ) => {
-        doc
-          .fillColor(colors.secondary)
-          .font("Helvetica")
-          .fontSize(8)
-          .text(
-            label,
-            orderCardX,
-            orderCardY
-          );
-
-        doc
-          .fillColor(colors.text)
-          .font("Helvetica-Bold")
-          .fontSize(9)
-          .text(
-            value || "-",
-            orderCardX + 82,
-            orderCardY,
-            {
-              width:
-                cardWidth -
-                112,
-            }
-          );
-
-        orderCardY += 22;
-      };
-
-      writeOrderRow(
-        "Pedido:",
-        order.orderNumber
-      );
-
-      writeOrderRow(
-        "Fecha:",
-        formatDate(
-          order.createdAt
-        )
-      );
-
-      writeOrderRow(
-        "Origen:",
-        order.source || "-"
-      );
-
-      writeOrderRow(
-        "Estado:",
-        getOrderStatusLabel(
-          order.status
-        )
-      );
-
-      /*
-       * ========================================
-       * PRODUCTOS
-       * ========================================
-       */
-
-      let y =
-        cardsY +
-        cardHeight +
-        28;
-
-      const tableX = left;
-
-      const tableWidth =
-        contentWidth;
-
-      const columns = {
-        number: {
-          x: tableX,
-          width: 25,
-        },
-
-        product: {
-          x: tableX + 25,
-          width: 170,
-        },
-
-        color: {
-          x: tableX + 195,
-          width: 65,
-        },
-
-        size: {
-          x: tableX + 260,
-          width: 45,
-        },
-
-        quantity: {
-          x: tableX + 305,
-          width: 55,
-        },
-
-        price: {
-          x: tableX + 360,
-          width: 72,
-        },
-
-        subtotal: {
-          x: tableX + 432,
-          width:
-            tableWidth -
-            432,
-        },
-      };
-
-      const drawTableHeader = () => {
-        doc
-          .roundedRect(
-            tableX,
-            y,
-            tableWidth,
-            30,
-            5
-          )
-          .fill(
-            colors.tableHeader
-          );
-
-        doc
-          .fillColor(colors.text)
-          .font("Helvetica-Bold")
-          .fontSize(7.5);
-
-        doc.text(
-          "#",
-          columns.number.x,
-          y + 11,
-          {
-            width:
-              columns.number
-                .width,
-            align: "center",
-          }
-        );
-
-        doc.text(
-          "PRODUCTO",
-          columns.product.x,
-          y + 11,
-          {
-            width:
-              columns.product
-                .width,
-          }
-        );
-
-        doc.text(
-          "COLOR",
-          columns.color.x,
-          y + 11,
-          {
-            width:
-              columns.color.width,
-          }
-        );
-
-        doc.text(
-          "TALLA",
-          columns.size.x,
-          y + 11,
-          {
-            width:
-              columns.size.width,
-            align: "center",
-          }
-        );
-
-        doc.text(
-          "CANT.",
-          columns.quantity.x,
-          y + 11,
-          {
-            width:
-              columns.quantity
-                .width,
-            align: "center",
-          }
-        );
-
-        doc.text(
-          "PRECIO",
-          columns.price.x,
-          y + 11,
-          {
-            width:
-              columns.price.width,
-            align: "right",
-          }
-        );
-
-        doc.text(
-          "SUBTOTAL",
-          columns.subtotal.x,
-          y + 11,
-          {
-            width:
-              columns.subtotal
-                .width,
-            align: "right",
-          }
-        );
-
-        y += 38;
-      };
-
-      drawTableHeader();
-
-      order.items.forEach(
-        (item, index) => {
-          const rowHeight =
-            Number(
-              item.discount
-            ) > 0
-              ? 52
-              : 42;
-
-          if (
-            y +
-              rowHeight >
-            735
-          ) {
-            doc.addPage();
-
-            y = 50;
-
-            drawTableHeader();
-          }
-
-          doc
-            .fillColor(
-              colors.text
-            )
-            .font(
-              "Helvetica"
-            )
-            .fontSize(8.5);
-
-          doc.text(
-            String(index + 1),
-            columns.number.x,
-            y + 5,
-            {
-              width:
-                columns.number
-                  .width,
-              align: "center",
-            }
-          );
-
-          doc
-            .font(
-              "Helvetica-Bold"
-            )
-            .text(
-              item.name,
-              columns.product.x,
-              y + 5,
-              {
-                width:
-                  columns.product
-                    .width -
-                  5,
-              }
-            );
-
-          if (
-            Number(
-              item.discount
-            ) > 0
-          ) {
-            doc
-              .fillColor(
-                colors.dangerText
-              )
-              .font(
-                "Helvetica"
-              )
-              .fontSize(7)
-              .text(
-                `${item.discount}% descuento`,
-                columns.product.x,
-                y + 21,
-                {
-                  width:
-                    columns.product
-                      .width,
-                }
-              );
-          }
-
-          doc
-            .fillColor(
-              colors.text
-            )
-            .font(
-              "Helvetica"
-            )
-            .fontSize(8);
-
-          doc.text(
-            item.color ||
-              "-",
-            columns.color.x,
-            y + 5,
-            {
-              width:
-                columns.color.width,
-            }
-          );
-
-          doc.text(
-            item.size || "-",
-            columns.size.x,
-            y + 5,
-            {
-              width:
-                columns.size.width,
-              align: "center",
-            }
-          );
-
-          doc.text(
-            String(
-              item.quantity
-            ),
-            columns.quantity.x,
-            y + 5,
-            {
-              width:
-                columns.quantity
-                  .width,
-              align: "center",
-            }
-          );
-
-          doc.text(
-            formatCurrency(
-              item.unitPrice
-            ),
-            columns.price.x,
-            y + 5,
-            {
-              width:
-                columns.price.width,
-              align: "right",
-            }
-          );
-
-          doc
-            .font(
-              "Helvetica-Bold"
-            )
-            .text(
-              formatCurrency(
-                item.subtotal
-              ),
-              columns.subtotal.x,
-              y + 5,
-              {
-                width:
-                  columns.subtotal
-                    .width,
-                align: "right",
-              }
-            );
-
-          y += rowHeight;
-
+        /*
+         * ========================================
+         * HELPERS
+         * ========================================
+         */
+
+        const drawLine = (
+          y
+        ) => {
           doc
             .strokeColor(
               colors.border
             )
-            .lineWidth(0.7)
+            .lineWidth(1)
             .moveTo(
-              tableX,
+              left,
               y
             )
             .lineTo(
-              tableX +
-                tableWidth,
+              right,
               y
             )
             .stroke();
+        };
 
-          y += 5;
-        }
-      );
-
-      /*
-       * ========================================
-       * RESUMEN
-       * ========================================
-       */
-
-      if (y > 640) {
-        doc.addPage();
-
-        y = 60;
-      }
-
-      y += 20;
-
-      const summaryWidth = 220;
-
-      const summaryX =
-        right -
-        summaryWidth;
-
-      const summaryHeight =
-        discountTotal > 0
-          ? 112
-          : 88;
-
-      doc
-        .roundedRect(
-          summaryX,
+        const drawCard = (
+          x,
           y,
-          summaryWidth,
-          summaryHeight,
-          8
-        )
-        .fillAndStroke(
-          colors.lightBackground,
-          colors.border
-        );
+          width,
+          height
+        ) => {
+          doc
+            .roundedRect(
+              x,
+              y,
+              width,
+              height,
+              8
+            )
+            .fillAndStroke(
+              colors.lightBackground,
+              colors.border
+            );
+        };
 
-      let summaryY =
-        y + 16;
+        const drawStatusBadge =
+          (
+            status,
+            x,
+            y
+          ) => {
+            const statusStyles =
+              {
+                PENDING: {
+                  background:
+                    colors.warningBackground,
+                  text:
+                    colors.warningText,
+                },
 
-      doc
-        .fillColor(
-          colors.secondary
-        )
-        .font("Helvetica")
-        .fontSize(9)
-        .text(
-          "Subtotal",
-          summaryX + 15,
-          summaryY
-        );
+                CONFIRMED: {
+                  background:
+                    colors.infoBackground,
+                  text:
+                    colors.infoText,
+                },
 
-      doc
-        .fillColor(colors.text)
-        .font("Helvetica-Bold")
-        .text(
-          formatCurrency(
-            originalSubtotal
-          ),
-          summaryX + 100,
-          summaryY,
-          {
-            width: 100,
-            align: "right",
-          }
-        );
+                PREPARING: {
+                  background:
+                    "#F3EDFF",
+                  text:
+                    "#7251A3",
+                },
 
-      summaryY += 25;
+                SHIPPED: {
+                  background:
+                    "#EBEEFF",
+                  text:
+                    "#4C5EA7",
+                },
 
-      if (
-        discountTotal > 0
-      ) {
+                DELIVERED: {
+                  background:
+                    colors.successBackground,
+                  text:
+                    colors.successText,
+                },
+
+                CANCELLED: {
+                  background:
+                    colors.dangerBackground,
+                  text:
+                    colors.dangerText,
+                },
+              };
+
+            const style =
+              statusStyles[
+                status
+              ] || {
+                background:
+                  "#EEEEEE",
+                text:
+                  colors.secondary,
+              };
+
+            doc
+              .roundedRect(
+                x,
+                y,
+                105,
+                28,
+                7
+              )
+              .fill(
+                style.background
+              );
+
+            doc
+              .fillColor(
+                style.text
+              )
+              .font(
+                "Helvetica-Bold"
+              )
+              .fontSize(9)
+              .text(
+                getOrderStatusLabel(
+                  status
+                ).toUpperCase(),
+                x,
+                y + 9,
+                {
+                  width: 105,
+                  align:
+                    "center",
+                }
+              );
+          };
+
+        /*
+         * ========================================
+         * ENCABEZADO
+         * ========================================
+         */
+
+        try {
+          doc.image(
+            logoPath,
+            left,
+            40,
+            {
+              fit: [
+                80,
+                80,
+              ],
+              align:
+                "center",
+              valign:
+                "center",
+            }
+          );
+        } catch (error) {
+          console.warn(
+            "Invoice logo could not be loaded:",
+            error.message
+          );
+        }
+
         doc
           .fillColor(
-            colors.dangerText
+            colors.text
           )
-          .font("Helvetica")
-          .text(
-            "Descuentos",
-            summaryX + 15,
-            summaryY
-          );
-
-        doc
           .font(
             "Helvetica-Bold"
           )
+          .fontSize(27)
           .text(
-            `-${formatCurrency(
-              discountTotal
-            )}`,
-            summaryX + 100,
-            summaryY,
+            "CLOTHES J&S",
+            left + 100,
+            49,
             {
-              width: 100,
-              align: "right",
+              width: 280,
             }
           );
 
-        summaryY += 27;
-      }
-
-      doc
-        .strokeColor(
-          colors.border
-        )
-        .moveTo(
-          summaryX + 15,
-          summaryY
-        )
-        .lineTo(
-          summaryX +
-            summaryWidth -
-            15,
-          summaryY
-        )
-        .stroke();
-
-      summaryY += 12;
-
-      doc
-        .fillColor(colors.text)
-        .font(
-          "Helvetica-Bold"
-        )
-        .fontSize(12)
-        .text(
-          "TOTAL",
-          summaryX + 15,
-          summaryY
-        );
-
-      doc
-        .fontSize(14)
-        .text(
-          formatCurrency(
-            order.total
-          ),
-          summaryX + 95,
-          summaryY - 2,
-          {
-            width: 105,
-            align: "right",
-          }
-        );
-
-      y +=
-        summaryHeight + 25;
-
-      /*
-       * ========================================
-       * NOTAS
-       * ========================================
-       */
-
-      if (
-        order.customer?.notes
-      ) {
-        if (y > 680) {
-          doc.addPage();
-
-          y = 60;
-        }
+        doc
+          .fillColor(
+            colors.secondary
+          )
+          .font(
+            "Helvetica"
+          )
+          .fontSize(10)
+          .text(
+            "WEAR YOUR STORY",
+            left + 101,
+            83,
+            {
+              characterSpacing:
+                2,
+            }
+          );
 
         doc
-          .roundedRect(
-            left,
-            y,
-            contentWidth,
-            65,
-            8
+          .strokeColor(
+            colors.accent
           )
-          .fillAndStroke(
-            colors.lightBackground,
-            colors.border
+          .lineWidth(2)
+          .moveTo(
+            left + 101,
+            105
+          )
+          .lineTo(
+            left + 220,
+            105
+          )
+          .stroke();
+
+        doc
+          .fillColor(
+            colors.secondary
+          )
+          .font(
+            "Helvetica"
+          )
+          .fontSize(9)
+          .text(
+            "Comprobante de compra",
+            right - 150,
+            55,
+            {
+              width: 150,
+              align:
+                "right",
+            }
           );
 
         doc
@@ -1494,11 +855,46 @@ const generateOrderInvoice = async (id) => {
           .font(
             "Helvetica-Bold"
           )
-          .fontSize(9)
+          .fontSize(10)
           .text(
-            "NOTAS",
-            left + 15,
-            y + 13
+            order.orderNumber,
+            right - 150,
+            72,
+            {
+              width: 150,
+              align:
+                "right",
+            }
+          );
+
+        drawLine(130);
+
+        /*
+         * ========================================
+         * FACTURA + ESTADO
+         * ========================================
+         */
+
+        doc
+          .fillColor(
+            colors.text
+          )
+          .font(
+            "Helvetica-Bold"
+          )
+          .fontSize(24)
+          .text(
+            "COMPROBANTE",
+            left,
+            153
+          );
+
+        doc
+          .fontSize(13)
+          .text(
+            order.orderNumber,
+            left,
+            186
           );
 
         doc
@@ -1510,118 +906,1062 @@ const generateOrderInvoice = async (id) => {
           )
           .fontSize(9)
           .text(
-            order.customer
-              .notes,
-            left + 15,
-            y + 32,
+            `Fecha: ${formatDate(
+              order.createdAt
+            )}`,
+            left,
+            208
+          );
+
+        doc
+          .fillColor(
+            colors.secondary
+          )
+          .font(
+            "Helvetica"
+          )
+          .fontSize(8)
+          .text(
+            "ESTADO DEL PEDIDO",
+            right - 110,
+            158,
             {
-              width:
-                contentWidth -
-                30,
+              width: 110,
+              align:
+                "center",
             }
           );
 
-        y += 85;
-      }
+        drawStatusBadge(
+          order.status,
+          right - 108,
+          178
+        );
 
-      /*
-       * ========================================
-       * AGRADECIMIENTO
-       * ========================================
-       */
+        /*
+         * ========================================
+         * CARDS CLIENTE Y PEDIDO
+         * ========================================
+         */
 
-      if (y > 690) {
-        doc.addPage();
+        const cardsY = 245;
+        const cardGap = 15;
 
-        y = 90;
-      }
+        const cardWidth =
+          (contentWidth -
+            cardGap) /
+          2;
 
-      doc
-        .fillColor(
-          colors.text
-        )
-        .font(
-          "Helvetica-Bold"
-        )
-        .fontSize(17)
-        .text(
-          "¡Gracias por tu compra!",
+        const cardHeight =
+          150;
+
+        drawCard(
           left,
-          y,
-          {
+          cardsY,
+          cardWidth,
+          cardHeight
+        );
+
+        drawCard(
+          left +
+            cardWidth +
+            cardGap,
+          cardsY,
+          cardWidth,
+          cardHeight
+        );
+
+        /*
+         * CLIENTE
+         */
+
+        doc
+          .fillColor(
+            colors.text
+          )
+          .font(
+            "Helvetica-Bold"
+          )
+          .fontSize(11)
+          .text(
+            "INFORMACIÓN DEL CLIENTE",
+            left + 15,
+            cardsY + 16
+          );
+
+        const clientX =
+          left + 15;
+
+        let clientY =
+          cardsY + 42;
+
+        const writeClientRow =
+          (
+            label,
+            value
+          ) => {
+            doc
+              .fillColor(
+                colors.secondary
+              )
+              .font(
+                "Helvetica"
+              )
+              .fontSize(8)
+              .text(
+                label,
+                clientX,
+                clientY
+              );
+
+            doc
+              .fillColor(
+                colors.text
+              )
+              .font(
+                "Helvetica-Bold"
+              )
+              .fontSize(9)
+              .text(
+                value ||
+                  "-",
+                clientX +
+                  62,
+                clientY,
+                {
+                  width:
+                    cardWidth -
+                    87,
+                }
+              );
+
+            clientY += 20;
+          };
+
+        writeClientRow(
+          "Nombre:",
+          order.customer
+            ?.name
+        );
+
+        writeClientRow(
+          "Teléfono:",
+          order.customer
+            ?.phone
+        );
+
+        writeClientRow(
+          "Correo:",
+          order.customer
+            ?.email
+        );
+
+        writeClientRow(
+          "Ciudad:",
+          order.customer
+            ?.city
+        );
+
+        writeClientRow(
+          "Dirección:",
+          order.customer
+            ?.address
+        );
+
+        /*
+         * PEDIDO
+         */
+
+        const orderCardX =
+          left +
+          cardWidth +
+          cardGap +
+          15;
+
+        let orderCardY =
+          cardsY + 42;
+
+        doc
+          .fillColor(
+            colors.text
+          )
+          .font(
+            "Helvetica-Bold"
+          )
+          .fontSize(11)
+          .text(
+            "INFORMACIÓN DEL PEDIDO",
+            orderCardX,
+            cardsY + 16
+          );
+
+        const writeOrderRow =
+          (
+            label,
+            value
+          ) => {
+            doc
+              .fillColor(
+                colors.secondary
+              )
+              .font(
+                "Helvetica"
+              )
+              .fontSize(8)
+              .text(
+                label,
+                orderCardX,
+                orderCardY
+              );
+
+            doc
+              .fillColor(
+                colors.text
+              )
+              .font(
+                "Helvetica-Bold"
+              )
+              .fontSize(9)
+              .text(
+                value ||
+                  "-",
+                orderCardX +
+                  82,
+                orderCardY,
+                {
+                  width:
+                    cardWidth -
+                    112,
+                }
+              );
+
+            orderCardY += 22;
+          };
+
+        writeOrderRow(
+          "Pedido:",
+          order.orderNumber
+        );
+
+        writeOrderRow(
+          "Fecha:",
+          formatDate(
+            order.createdAt
+          )
+        );
+
+        writeOrderRow(
+          "Origen:",
+          order.source ||
+            "-"
+        );
+
+        writeOrderRow(
+          "Estado:",
+          getOrderStatusLabel(
+            order.status
+          )
+        );
+
+        /*
+         * ========================================
+         * PRODUCTOS
+         * ========================================
+         */
+
+        let y =
+          cardsY +
+          cardHeight +
+          28;
+
+        const tableX = left;
+
+        const tableWidth =
+          contentWidth;
+
+        const columns = {
+          number: {
+            x: tableX,
+            width: 25,
+          },
+
+          product: {
+            x:
+              tableX + 25,
+            width: 170,
+          },
+
+          color: {
+            x:
+              tableX +
+              195,
+            width: 65,
+          },
+
+          size: {
+            x:
+              tableX +
+              260,
+            width: 45,
+          },
+
+          quantity: {
+            x:
+              tableX +
+              305,
+            width: 55,
+          },
+
+          price: {
+            x:
+              tableX +
+              360,
+            width: 72,
+          },
+
+          subtotal: {
+            x:
+              tableX +
+              432,
             width:
-              contentWidth,
-            align: "center",
+              tableWidth -
+              432,
+          },
+        };
+
+        const drawTableHeader =
+          () => {
+            doc
+              .roundedRect(
+                tableX,
+                y,
+                tableWidth,
+                30,
+                5
+              )
+              .fill(
+                colors.tableHeader
+              );
+
+            doc
+              .fillColor(
+                colors.text
+              )
+              .font(
+                "Helvetica-Bold"
+              )
+              .fontSize(7.5);
+
+            doc.text(
+              "#",
+              columns.number
+                .x,
+              y + 11,
+              {
+                width:
+                  columns
+                    .number
+                    .width,
+                align:
+                  "center",
+              }
+            );
+
+            doc.text(
+              "PRODUCTO",
+              columns.product
+                .x,
+              y + 11,
+              {
+                width:
+                  columns
+                    .product
+                    .width,
+              }
+            );
+
+            doc.text(
+              "COLOR",
+              columns.color.x,
+              y + 11,
+              {
+                width:
+                  columns.color
+                    .width,
+              }
+            );
+
+            doc.text(
+              "TALLA",
+              columns.size.x,
+              y + 11,
+              {
+                width:
+                  columns.size
+                    .width,
+                align:
+                  "center",
+              }
+            );
+
+            doc.text(
+              "CANT.",
+              columns.quantity
+                .x,
+              y + 11,
+              {
+                width:
+                  columns
+                    .quantity
+                    .width,
+                align:
+                  "center",
+              }
+            );
+
+            doc.text(
+              "PRECIO",
+              columns.price.x,
+              y + 11,
+              {
+                width:
+                  columns.price
+                    .width,
+                align:
+                  "right",
+              }
+            );
+
+            doc.text(
+              "SUBTOTAL",
+              columns.subtotal
+                .x,
+              y + 11,
+              {
+                width:
+                  columns
+                    .subtotal
+                    .width,
+                align:
+                  "right",
+              }
+            );
+
+            y += 38;
+          };
+
+        drawTableHeader();
+
+        order.items.forEach(
+          (
+            item,
+            index
+          ) => {
+            const rowHeight =
+              Number(
+                item.discount
+              ) > 0
+                ? 52
+                : 42;
+
+            if (
+              y +
+                rowHeight >
+              735
+            ) {
+              doc.addPage();
+
+              y = 50;
+
+              drawTableHeader();
+            }
+
+            doc
+              .fillColor(
+                colors.text
+              )
+              .font(
+                "Helvetica"
+              )
+              .fontSize(8.5);
+
+            doc.text(
+              String(
+                index + 1
+              ),
+              columns.number.x,
+              y + 5,
+              {
+                width:
+                  columns.number
+                    .width,
+                align:
+                  "center",
+              }
+            );
+
+            doc
+              .font(
+                "Helvetica-Bold"
+              )
+              .text(
+                item.name,
+                columns.product.x,
+                y + 5,
+                {
+                  width:
+                    columns.product
+                      .width -
+                    5,
+                }
+              );
+
+            if (
+              Number(
+                item.discount
+              ) > 0
+            ) {
+              doc
+                .fillColor(
+                  colors.dangerText
+                )
+                .font(
+                  "Helvetica"
+                )
+                .fontSize(7)
+                .text(
+                  `${item.discount}% descuento`,
+                  columns.product.x,
+                  y + 21,
+                  {
+                    width:
+                      columns.product
+                        .width,
+                  }
+                );
+            }
+
+            doc
+              .fillColor(
+                colors.text
+              )
+              .font(
+                "Helvetica"
+              )
+              .fontSize(8);
+
+            doc.text(
+              item.color ||
+                "-",
+              columns.color.x,
+              y + 5,
+              {
+                width:
+                  columns.color
+                    .width,
+              }
+            );
+
+            doc.text(
+              item.size ||
+                "-",
+              columns.size.x,
+              y + 5,
+              {
+                width:
+                  columns.size
+                    .width,
+                align:
+                  "center",
+              }
+            );
+
+            doc.text(
+              String(
+                item.quantity
+              ),
+              columns.quantity.x,
+              y + 5,
+              {
+                width:
+                  columns.quantity
+                    .width,
+                align:
+                  "center",
+              }
+            );
+
+            doc.text(
+              formatCurrency(
+                item.unitPrice
+              ),
+              columns.price.x,
+              y + 5,
+              {
+                width:
+                  columns.price
+                    .width,
+                align:
+                  "right",
+              }
+            );
+
+            doc
+              .font(
+                "Helvetica-Bold"
+              )
+              .text(
+                formatCurrency(
+                  item.subtotal
+                ),
+                columns.subtotal.x,
+                y + 5,
+                {
+                  width:
+                    columns.subtotal
+                      .width,
+                  align:
+                    "right",
+                }
+              );
+
+            y += rowHeight;
+
+            doc
+              .strokeColor(
+                colors.border
+              )
+              .lineWidth(0.7)
+              .moveTo(
+                tableX,
+                y
+              )
+              .lineTo(
+                tableX +
+                  tableWidth,
+                y
+              )
+              .stroke();
+
+            y += 5;
           }
         );
 
-      doc
-        .moveDown(0.5)
-        .fillColor(
-          colors.secondary
-        )
-        .font(
-          "Helvetica"
-        )
-        .fontSize(9)
-        .text(
-          "En CLOTHES J&S queremos que cada prenda sea parte de tu historia.",
-          {
-            width:
-              contentWidth,
-            align: "center",
+        /*
+         * ========================================
+         * RESUMEN
+         * ========================================
+         */
+
+        if (y > 610) {
+          doc.addPage();
+
+          y = 60;
+        }
+
+        y += 20;
+
+        const summaryWidth =
+          220;
+
+        const summaryX =
+          right -
+          summaryWidth;
+
+        const summaryHeight =
+          discountTotal > 0
+            ? 145
+            : 120;
+
+        doc
+          .roundedRect(
+            summaryX,
+            y,
+            summaryWidth,
+            summaryHeight,
+            8
+          )
+          .fillAndStroke(
+            colors.lightBackground,
+            colors.border
+          );
+
+        let summaryY =
+          y + 16;
+
+        /*
+         * SUBTOTAL
+         */
+
+        doc
+          .fillColor(
+            colors.secondary
+          )
+          .font(
+            "Helvetica"
+          )
+          .fontSize(9)
+          .text(
+            "Subtotal",
+            summaryX + 15,
+            summaryY
+          );
+
+        doc
+          .fillColor(
+            colors.text
+          )
+          .font(
+            "Helvetica-Bold"
+          )
+          .text(
+            formatCurrency(
+              originalSubtotal
+            ),
+            summaryX + 100,
+            summaryY,
+            {
+              width: 100,
+              align:
+                "right",
+            }
+          );
+
+        summaryY += 25;
+
+        /*
+         * DESCUENTOS
+         */
+
+        if (
+          discountTotal > 0
+        ) {
+          doc
+            .fillColor(
+              colors.dangerText
+            )
+            .font(
+              "Helvetica"
+            )
+            .text(
+              "Descuentos",
+              summaryX + 15,
+              summaryY
+            );
+
+          doc
+            .font(
+              "Helvetica-Bold"
+            )
+            .text(
+              `-${formatCurrency(
+                discountTotal
+              )}`,
+              summaryX + 100,
+              summaryY,
+              {
+                width: 100,
+                align:
+                  "right",
+              }
+            );
+
+          summaryY += 25;
+        }
+
+        /*
+         * COSTO DE ENVÍO
+         */
+
+        doc
+          .fillColor(
+            colors.secondary
+          )
+          .font(
+            "Helvetica"
+          )
+          .fontSize(9)
+          .text(
+            "Costo de envío",
+            summaryX + 15,
+            summaryY
+          );
+
+        if (
+          shippingCost > 0
+        ) {
+          doc
+            .fillColor(
+              colors.text
+            )
+            .font(
+              "Helvetica-Bold"
+            )
+            .text(
+              formatCurrency(
+                shippingCost
+              ),
+              summaryX + 100,
+              summaryY,
+              {
+                width: 100,
+                align:
+                  "right",
+              }
+            );
+        } else {
+          doc
+            .fillColor(
+              colors.successText
+            )
+            .font(
+              "Helvetica-Bold"
+            )
+            .text(
+              "GRATIS",
+              summaryX + 100,
+              summaryY,
+              {
+                width: 100,
+                align:
+                  "right",
+              }
+            );
+        }
+
+        summaryY += 28;
+
+        /*
+         * SEPARADOR
+         */
+
+        doc
+          .strokeColor(
+            colors.border
+          )
+          .moveTo(
+            summaryX + 15,
+            summaryY
+          )
+          .lineTo(
+            summaryX +
+              summaryWidth -
+              15,
+            summaryY
+          )
+          .stroke();
+
+        summaryY += 12;
+
+        /*
+         * TOTAL
+         */
+
+        doc
+          .fillColor(
+            colors.text
+          )
+          .font(
+            "Helvetica-Bold"
+          )
+          .fontSize(12)
+          .text(
+            "TOTAL",
+            summaryX + 15,
+            summaryY
+          );
+
+        doc
+          .fontSize(14)
+          .text(
+            formatCurrency(
+              invoiceTotal
+            ),
+            summaryX + 95,
+            summaryY - 2,
+            {
+              width: 105,
+              align:
+                "right",
+            }
+          );
+
+        y +=
+          summaryHeight +
+          25;
+
+        /*
+         * ========================================
+         * NOTAS
+         * ========================================
+         */
+
+        if (
+          order.customer
+            ?.notes
+        ) {
+          if (y > 680) {
+            doc.addPage();
+
+            y = 60;
           }
+
+          doc
+            .roundedRect(
+              left,
+              y,
+              contentWidth,
+              65,
+              8
+            )
+            .fillAndStroke(
+              colors.lightBackground,
+              colors.border
+            );
+
+          doc
+            .fillColor(
+              colors.text
+            )
+            .font(
+              "Helvetica-Bold"
+            )
+            .fontSize(9)
+            .text(
+              "NOTAS",
+              left + 15,
+              y + 13
+            );
+
+          doc
+            .fillColor(
+              colors.secondary
+            )
+            .font(
+              "Helvetica"
+            )
+            .fontSize(9)
+            .text(
+              order.customer
+                .notes,
+              left + 15,
+              y + 32,
+              {
+                width:
+                  contentWidth -
+                  30,
+              }
+            );
+
+          y += 85;
+        }
+
+        /*
+         * ========================================
+         * AGRADECIMIENTO
+         * ========================================
+         */
+
+        if (y > 690) {
+          doc.addPage();
+
+          y = 90;
+        }
+
+        doc
+          .fillColor(
+            colors.text
+          )
+          .font(
+            "Helvetica-Bold"
+          )
+          .fontSize(17)
+          .text(
+            "¡Gracias por tu compra!",
+            left,
+            y,
+            {
+              width:
+                contentWidth,
+              align:
+                "center",
+            }
+          );
+
+        doc
+          .moveDown(0.5)
+          .fillColor(
+            colors.secondary
+          )
+          .font(
+            "Helvetica"
+          )
+          .fontSize(9)
+          .text(
+            "En CLOTHES J&S queremos que cada prenda sea parte de tu historia.",
+            {
+              width:
+                contentWidth,
+              align:
+                "center",
+            }
+          );
+
+        doc
+          .moveDown(0.4)
+          .fillColor(
+            colors.accent
+          )
+          .font(
+            "Helvetica-Bold"
+          )
+          .fontSize(10)
+          .text(
+            "WEAR YOUR STORY",
+            {
+              width:
+                contentWidth,
+              align:
+                "center",
+              characterSpacing:
+                1.5,
+            }
+          );
+
+        doc.moveDown(1.5);
+
+        drawLine(
+          doc.y
         );
 
-      doc
-        .moveDown(0.4)
-        .fillColor(
-          colors.accent
-        )
-        .font(
-          "Helvetica-Bold"
-        )
-        .fontSize(10)
-        .text(
-          "WEAR YOUR STORY",
-          {
-            width:
-              contentWidth,
-            align: "center",
-            characterSpacing: 1.5,
-          }
-        );
+        doc.moveDown(0.8);
 
-      doc.moveDown(1.5);
+        doc
+          .fillColor(
+            colors.lightText
+          )
+          .font(
+            "Helvetica"
+          )
+          .fontSize(7.5)
+          .text(
+            "Este documento corresponde a un comprobante de compra generado a partir del pedido registrado en CLOTHES J&S.",
+            left,
+            doc.y,
+            {
+              width:
+                contentWidth,
+              align:
+                "center",
+            }
+          );
 
-      drawLine(doc.y);
-
-      doc.moveDown(0.8);
-
-      doc
-        .fillColor(
-          colors.lightText
-        )
-        .font(
-          "Helvetica"
-        )
-        .fontSize(7.5)
-        .text(
-          "Este documento corresponde a un comprobante de compra generado a partir del pedido registrado en CLOTHES J&S.",
-          left,
-          doc.y,
-          {
-            width:
-              contentWidth,
-            align: "center",
-          }
-        );
-
-      doc.end();
-    } catch (error) {
-      reject(error);
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
     }
-  });
+  );
 };
 
 module.exports = {
