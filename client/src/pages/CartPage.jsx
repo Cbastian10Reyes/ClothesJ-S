@@ -3,11 +3,17 @@ import React, {
   useState,
 } from "react"
 
-import { Link } from "react-router-dom"
+import {
+  Link,
+} from "react-router-dom"
 
-import { ShoppingBag } from "react-feather"
+import {
+  ShoppingBag,
+} from "react-feather"
 
-import { CartContext } from "@/App"
+import {
+  CartContext,
+} from "@/App"
 
 import CartList from "@/ui/CartList"
 
@@ -22,6 +28,12 @@ import api from "@/api"
 import {
   sendOrderToWhatsApp,
 } from "@/utils/whatsapp"
+
+const FREE_SHIPPING_GOAL =
+  250000
+
+const SHIPPING_COST =
+  15000
 
 const initialCustomer = {
   name: "",
@@ -41,7 +53,9 @@ export default function CartPage() {
   const [
     customer,
     setCustomer,
-  ] = useState(initialCustomer)
+  ] = useState(
+    initialCustomer
+  )
 
   const [
     creatingOrder,
@@ -53,62 +67,126 @@ export default function CartPage() {
     setCheckoutError,
   ] = useState("")
 
-  const { cart, cartDispatch } =
-    useContext(CartContext)
+  const {
+    cart,
+    cartDispatch,
+  } = useContext(
+    CartContext
+  )
 
-  const subtotal = cart.products.reduce(
-    (total, product) => {
-      const originalPrice =
-        Number(product.originalPrice) ||
-        Number(
-          product.selectedVariant?.price
-        ) ||
-        0
-  
-      const quantity =
-        Number(product.quantity) || 1
-  
-      return (
-        total +
-        originalPrice * quantity
-      )
-    },
-    0
-  )
-  
-  const total = cart.products.reduce(
-    (total, product) => {
-      const finalPrice =
-        Number(product.finalPrice) ||
-        Number(
-          product.selectedVariant?.price
-        ) ||
-        0
-  
-      const quantity =
-        Number(product.quantity) || 1
-  
-      return (
-        total +
-        finalPrice * quantity
-      )
-    },
-    0
-  )
-  
+  /*
+   * =========================
+   * TOTALES DEL CARRITO
+   * =========================
+   */
+
+  const subtotal =
+    cart.products.reduce(
+      (
+        total,
+        product
+      ) => {
+        const originalPrice =
+          Number(
+            product.originalPrice
+          ) ||
+          Number(
+            product
+              .selectedVariant
+              ?.price
+          ) ||
+          0
+
+        const quantity =
+          Number(
+            product.quantity
+          ) || 1
+
+        return (
+          total +
+          originalPrice *
+            quantity
+        )
+      },
+      0
+    )
+
+  const total =
+    cart.products.reduce(
+      (
+        total,
+        product
+      ) => {
+        const finalPrice =
+          Number(
+            product.finalPrice
+          ) ||
+          Number(
+            product
+              .selectedVariant
+              ?.price
+          ) ||
+          0
+
+        const quantity =
+          Number(
+            product.quantity
+          ) || 1
+
+        return (
+          total +
+          finalPrice *
+            quantity
+        )
+      },
+      0
+    )
+
   const discountTotal =
-  subtotal - total
+    subtotal - total
+
+  /*
+   * ENVÍO
+   *
+   * Si el total después de descuentos
+   * es menor a $250.000:
+   * envío = $15.000
+   *
+   * Si llega o supera $250.000:
+   * envío gratis.
+   */
+
+  const shippingCost =
+    total <
+    FREE_SHIPPING_GOAL
+      ? SHIPPING_COST
+      : 0
+
+  const finalTotal =
+    total +
+    shippingCost
+
+  /*
+   * =========================
+   * CANTIDAD DE PRODUCTOS
+   * =========================
+   */
 
   const setProductQuantity = (
     productId,
     variantId,
     quantity
   ) => {
-    const product = cart.products.find(
-      (item) =>
-        item._id === productId &&
-        item.selectedVariant?._id === variantId
-    )
+    const product =
+      cart.products.find(
+        (item) =>
+          item._id ===
+            productId &&
+          item
+            .selectedVariant
+            ?._id ===
+            variantId
+      )
 
     if (!product) {
       return
@@ -116,12 +194,16 @@ export default function CartPage() {
 
     const stock =
       Number(
-        product.selectedVariant?.stock
+        product
+          .selectedVariant
+          ?.stock
       ) || 0
 
     if (quantity < 1) {
       cartDispatch({
-        type: "REMOVE_PRODUCT",
+        type:
+          "REMOVE_PRODUCT",
+
         payload: {
           productId,
           variantId,
@@ -131,33 +213,51 @@ export default function CartPage() {
       return
     }
 
-    const safeQuantity = Math.min(
-      quantity,
-      stock
-    )
+    const safeQuantity =
+      Math.min(
+        quantity,
+        stock
+      )
 
     cartDispatch({
-      type: "SET_PRODUCT_QUANTITY",
+      type:
+        "SET_PRODUCT_QUANTITY",
+
       payload: {
         productId,
         variantId,
-        quantity: safeQuantity,
+        quantity:
+          safeQuantity,
       },
     })
   }
+
+  /*
+   * =========================
+   * ELIMINAR PRODUCTO
+   * =========================
+   */
 
   const removeProduct = (
     productId,
     variantId
   ) => {
     cartDispatch({
-      type: "REMOVE_PRODUCT",
+      type:
+        "REMOVE_PRODUCT",
+
       payload: {
         productId,
         variantId,
       },
     })
   }
+
+  /*
+   * =========================
+   * CLIENTE
+   * =========================
+   */
 
   const handleCustomerChange = (
     event
@@ -168,159 +268,219 @@ export default function CartPage() {
     } = event.target
 
     setCustomer(
-      (currentCustomer) => ({
+      (
+        currentCustomer
+      ) => ({
         ...currentCustomer,
         [name]: value,
       })
     )
   }
 
-  const validateCustomerForm = () => {
-    if (!customer.name.trim()) {
-      return "Ingresa tu nombre."
-    }
-
-    if (!customer.phone.trim()) {
-      return "Ingresa tu número de teléfono."
-    }
-
-    return null
-  }
-
-  const buildOrderData = () => {
-    return {
-      customer: {
-        name:
-          customer.name.trim(),
-
-        phone:
-          customer.phone.trim(),
-
-        email:
-          customer.email.trim() ||
-          undefined,
-
-        city:
-          customer.city.trim() ||
-          undefined,
-
-        address:
-          customer.address.trim() ||
-          undefined,
-
-        notes:
-          customer.notes.trim() ||
-          undefined,
-      },
-
-      items: cart.products.map(
-        (product) => ({
-          productId:
-            product._id,
-
-          variantId:
-            product.selectedVariant?._id,
-
-          quantity:
-            Number(
-              product.quantity
-            ) || 1,
-        })
-      ),
-    }
-  }
-
-  const handleCheckout = async () => {
-    const validationError =
-      validateCustomerForm()
-
-    if (validationError) {
-      setCheckoutError(
-        validationError
-      )
-
-      return
-    }
-
-    if (!cart?.products?.length) {
-      setCheckoutError(
-        "Tu carrito está vacío."
-      )
-
-      return
-    }
-
-    try {
-      setCreatingOrder(true)
-      setCheckoutError("")
-
-      const orderData =
-        buildOrderData()
-
-      const resp =
-        await api.createOrder(
-          orderData
-        )
+  const validateCustomerForm =
+    () => {
+      if (
+        !customer.name.trim()
+      ) {
+        return "Ingresa tu nombre."
+      }
 
       if (
-        resp?.status === "error" ||
-        !resp?.success ||
-        !resp?.data
+        !customer.phone.trim()
+      ) {
+        return "Ingresa tu número de teléfono."
+      }
+
+      return null
+    }
+
+  /*
+   * =========================
+   * DATA DEL PEDIDO
+   * =========================
+   */
+
+  const buildOrderData =
+    () => {
+      return {
+        customer: {
+          name:
+            customer.name.trim(),
+
+          phone:
+            customer.phone.trim(),
+
+          email:
+            customer.email.trim() ||
+            undefined,
+
+          city:
+            customer.city.trim() ||
+            undefined,
+
+          address:
+            customer.address.trim() ||
+            undefined,
+
+          notes:
+            customer.notes.trim() ||
+            undefined,
+        },
+
+        items:
+          cart.products.map(
+            (product) => ({
+              productId:
+                product._id,
+
+              variantId:
+                product
+                  .selectedVariant
+                  ?._id,
+
+              quantity:
+                Number(
+                  product.quantity
+                ) || 1,
+            })
+          ),
+      }
+    }
+
+  /*
+   * =========================
+   * CREAR PEDIDO
+   * =========================
+   */
+
+  const handleCheckout =
+    async () => {
+      const validationError =
+        validateCustomerForm()
+
+      if (
+        validationError
       ) {
         setCheckoutError(
-          resp?.message ||
-            "No fue posible crear el pedido."
+          validationError
         )
 
         return
       }
 
-      const createdOrder =
-        resp.data
+      if (
+        !cart?.products
+          ?.length
+      ) {
+        setCheckoutError(
+          "Tu carrito está vacío."
+        )
+
+        return
+      }
+
+      try {
+        setCreatingOrder(
+          true
+        )
+
+        setCheckoutError(
+          ""
+        )
+
+        const orderData =
+          buildOrderData()
+
+        const resp =
+          await api.createOrder(
+            orderData
+          )
+
+        if (
+          resp?.status ===
+            "error" ||
+          !resp?.success ||
+          !resp?.data
+        ) {
+          setCheckoutError(
+            resp?.message ||
+              "No fue posible crear el pedido."
+          )
+
+          return
+        }
+
+        const createdOrder =
+          resp.data
+
+        setShowWhatsAppConfirmation(
+          false
+        )
+
+        sendOrderToWhatsApp(
+          cart.products,
+          createdOrder.orderNumber
+        )
+      } catch (error) {
+        console.error(
+          "Error creando pedido:",
+          error
+        )
+
+        setCheckoutError(
+          "Ocurrió un error creando el pedido. Intenta nuevamente."
+        )
+      } finally {
+        setCreatingOrder(
+          false
+        )
+      }
+    }
+
+  /*
+   * =========================
+   * MODAL
+   * =========================
+   */
+
+  const openCheckoutModal =
+    () => {
+      setCheckoutError(
+        ""
+      )
+
+      setShowWhatsAppConfirmation(
+        true
+      )
+    }
+
+  const closeCheckoutModal =
+    () => {
+      if (
+        creatingOrder
+      ) {
+        return
+      }
 
       setShowWhatsAppConfirmation(
         false
       )
 
-      sendOrderToWhatsApp(
-        cart.products,
-        createdOrder.orderNumber
-      )
-    } catch (error) {
-      console.error(
-        "Error creando pedido:",
-        error
-      )
-
       setCheckoutError(
-        "Ocurrió un error creando el pedido. Intenta nuevamente."
+        ""
       )
-    } finally {
-      setCreatingOrder(false)
-    }
-  }
-
-  const openCheckoutModal = () => {
-    setCheckoutError("")
-
-    setShowWhatsAppConfirmation(
-      true
-    )
-  }
-
-  const closeCheckoutModal = () => {
-    if (creatingOrder) {
-      return
     }
 
-    setShowWhatsAppConfirmation(
-      false
-    )
+  /*
+   * =========================
+   * CARRITO VACÍO
+   * =========================
+   */
 
-    setCheckoutError("")
-  }
-
-  if (!cart?.products?.length) {
+  if (
+    !cart?.products
+      ?.length
+  ) {
     return (
       <main className="min-h-screen flex flex-col items-center text-center my-14 p-4">
 
@@ -329,6 +489,7 @@ export default function CartPage() {
         </PageHeader>
 
         <Link to="/products">
+
           <Button
             link
             className="text-xl"
@@ -337,6 +498,7 @@ export default function CartPage() {
 
             Continuar comprando
           </Button>
+
         </Link>
 
       </main>
@@ -356,8 +518,9 @@ export default function CartPage() {
         <section className="flex-1 sm:min-w-md divide-y divide-gray-200 border border-gray-300 rounded-lg shadow-sm overflow-hidden">
 
           <CartList
-            items={cart.products}
-
+            items={
+              cart.products
+            }
             setItemQuantity={(
               productId,
               variantId,
@@ -369,7 +532,6 @@ export default function CartPage() {
                 quantity
               )
             }
-
             removeItem={(
               productId,
               variantId
@@ -390,9 +552,15 @@ export default function CartPage() {
             onCheckout={
               openCheckoutModal
             }
-            subtotal={subtotal}
-            discountTotal={discountTotal}
-            total={total}
+            subtotal={
+              subtotal
+            }
+            discountTotal={
+              discountTotal
+            }
+            total={
+              total
+            }
           />
 
         </section>
@@ -429,7 +597,9 @@ export default function CartPage() {
               p-6
               my-8
             "
-            onClick={(event) =>
+            onClick={(
+              event
+            ) =>
               event.stopPropagation()
             }
           >
@@ -439,17 +609,15 @@ export default function CartPage() {
             </h2>
 
             <p className="text-gray-600 mt-3 leading-relaxed">
-              Completa tus datos para
-              registrar el pedido. Después
-              te redirigiremos a WhatsApp
-              para coordinar la entrega y
-              el método de pago.
+              Completa tus datos para registrar el pedido. Después te redirigiremos a WhatsApp para coordinar la entrega y el método de pago.
             </p>
 
             {/* DATOS CLIENTE */}
             <div className="mt-6 space-y-4">
 
+              {/* NOMBRE */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Nombre *
                 </label>
@@ -457,7 +625,9 @@ export default function CartPage() {
                 <input
                   type="text"
                   name="name"
-                  value={customer.name}
+                  value={
+                    customer.name
+                  }
                   onChange={
                     handleCustomerChange
                   }
@@ -473,9 +643,12 @@ export default function CartPage() {
                     focus:border-gray-800
                   "
                 />
+
               </div>
 
+              {/* TELÉFONO */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Teléfono *
                 </label>
@@ -483,7 +656,9 @@ export default function CartPage() {
                 <input
                   type="tel"
                   name="phone"
-                  value={customer.phone}
+                  value={
+                    customer.phone
+                  }
                   onChange={
                     handleCustomerChange
                   }
@@ -499,9 +674,12 @@ export default function CartPage() {
                     focus:border-gray-800
                   "
                 />
+
               </div>
 
+              {/* CORREO */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Correo
                 </label>
@@ -509,7 +687,9 @@ export default function CartPage() {
                 <input
                   type="email"
                   name="email"
-                  value={customer.email}
+                  value={
+                    customer.email
+                  }
                   onChange={
                     handleCustomerChange
                   }
@@ -525,9 +705,12 @@ export default function CartPage() {
                     focus:border-gray-800
                   "
                 />
+
               </div>
 
+              {/* CIUDAD */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Ciudad
                 </label>
@@ -535,7 +718,9 @@ export default function CartPage() {
                 <input
                   type="text"
                   name="city"
-                  value={customer.city}
+                  value={
+                    customer.city
+                  }
                   onChange={
                     handleCustomerChange
                   }
@@ -551,9 +736,12 @@ export default function CartPage() {
                     focus:border-gray-800
                   "
                 />
+
               </div>
 
+              {/* DIRECCIÓN */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Dirección
                 </label>
@@ -561,7 +749,9 @@ export default function CartPage() {
                 <input
                   type="text"
                   name="address"
-                  value={customer.address}
+                  value={
+                    customer.address
+                  }
                   onChange={
                     handleCustomerChange
                   }
@@ -577,16 +767,21 @@ export default function CartPage() {
                     focus:border-gray-800
                   "
                 />
+
               </div>
 
+              {/* NOTAS */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Notas
                 </label>
 
                 <textarea
                   name="notes"
-                  value={customer.notes}
+                  value={
+                    customer.notes
+                  }
                   onChange={
                     handleCustomerChange
                   }
@@ -604,13 +799,15 @@ export default function CartPage() {
                     focus:border-gray-800
                   "
                 />
+
               </div>
 
             </div>
 
             {/* RESUMEN */}
-            <div className="mt-6 rounded-lg bg-gray-100 px-4 py-3">
+            <div className="mt-6 rounded-lg bg-gray-100 px-4 py-4">
 
+              {/* UNIDADES */}
               <div className="flex justify-between text-sm text-gray-600">
 
                 <span>
@@ -633,7 +830,53 @@ export default function CartPage() {
 
               </div>
 
-              <div className="flex justify-between mt-2">
+              {/* PRODUCTOS */}
+              <div className="flex justify-between text-sm text-gray-600 mt-3">
+
+                <span>
+                  Productos
+                </span>
+
+                <span className="font-semibold text-gray-900">
+                  $
+                  {Number(
+                    total
+                  ).toLocaleString(
+                    "es-CO"
+                  )}
+                </span>
+
+              </div>
+
+              {/* ENVÍO */}
+              <div className="flex justify-between text-sm text-gray-600 mt-2">
+
+                <span>
+                  Envío
+                </span>
+
+                <span
+                  className={
+                    shippingCost ===
+                    0
+                      ? "font-semibold text-green-600"
+                      : "font-semibold text-gray-900"
+                  }
+                >
+                  {shippingCost ===
+                  0
+                    ? "Gratis"
+                    : `$${Number(
+                        shippingCost
+                      ).toLocaleString(
+                        "es-CO"
+                      )}`}
+                </span>
+
+              </div>
+
+              {/* TOTAL */}
+              <div className="flex justify-between border-t border-gray-300 pt-3 mt-3">
 
                 <span className="font-semibold text-gray-700">
                   Total estimado
@@ -642,7 +885,7 @@ export default function CartPage() {
                 <span className="text-xl font-bold text-gray-900">
                   $
                   {Number(
-                    cart.total
+                    finalTotal
                   ).toLocaleString(
                     "es-CO"
                   )}
@@ -655,7 +898,9 @@ export default function CartPage() {
             {/* ERROR */}
             {checkoutError && (
               <div className="mt-4 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-                {checkoutError}
+                {
+                  checkoutError
+                }
               </div>
             )}
 

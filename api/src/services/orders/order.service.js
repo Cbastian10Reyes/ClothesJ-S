@@ -15,6 +15,10 @@ const ORDER_STATUS = {
   CANCELLED: "CANCELLED",
 };
 
+const FREE_SHIPPING_GOAL = 250000;
+
+const SHIPPING_COST = 15000;
+
 const generateOrderNumber = async () => {
   const now = new Date();
 
@@ -200,28 +204,53 @@ const buildOrderItems = async (items) => {
 };
 
 const createOrder = async (data) => {
-  const customer = validateCustomer(data.customer);
-
-  validateOrderItems(data.items);
-
-  const items = await buildOrderItems(data.items);
-
-  const total = items.reduce(
-    (accumulator, item) => accumulator + item.subtotal,
-    0
+  const customer = validateCustomer(
+    data.customer
   );
 
-  const orderNumber = await generateOrderNumber();
+  validateOrderItems(
+    data.items
+  );
 
-  const order = await Order.create({
-    orderNumber,
-    customer,
-    items,
-    total,
-    status: ORDER_STATUS.PENDING,
-    source: "WHATSAPP",
-    whatsappSent: false,
-  });
+  const items =
+    await buildOrderItems(
+      data.items
+    );
+
+  const productsTotal =
+    items.reduce(
+      (
+        accumulator,
+        item
+      ) =>
+        accumulator +
+        item.subtotal,
+      0
+    );
+
+  const total =
+    productsTotal <
+    FREE_SHIPPING_GOAL
+      ? productsTotal +
+        SHIPPING_COST
+      : productsTotal;
+
+  const orderNumber =
+    await generateOrderNumber();
+
+  const order =
+    await Order.create({
+      orderNumber,
+      customer,
+      items,
+      total,
+      status:
+        ORDER_STATUS.PENDING,
+      source:
+        "WHATSAPP",
+      whatsappSent:
+        false,
+    });
 
   return order;
 };
