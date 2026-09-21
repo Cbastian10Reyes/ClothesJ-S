@@ -1,4 +1,10 @@
-import React from "react"
+import React, {
+  useState,
+} from "react"
+
+import {
+  Info,
+} from "react-feather"
 
 import Input from "@/components/Input"
 
@@ -10,12 +16,36 @@ export default function CartSummary({
   total,
   onCheckout,
 }) {
+  const [
+    showShippingInfo,
+    setShowShippingInfo,
+  ] = useState(false)
+
   const formatPrice = (value) =>
-    Number(value || 0).toLocaleString(
+    Number(
+      value || 0
+    ).toLocaleString(
       "es-CO"
     )
 
-  const FREE_SHIPPING_GOAL = 250000
+  const FREE_SHIPPING_GOAL =
+    250000
+
+  const SHIPPING_COST =
+    15000
+
+  const reachedGoal =
+    Number(total || 0) >=
+    FREE_SHIPPING_GOAL
+
+  const shippingCost =
+    reachedGoal
+      ? 0
+      : SHIPPING_COST
+
+  const finalTotal =
+    Number(total || 0) +
+    shippingCost
 
   const progress = Math.min(
     (Number(total || 0) /
@@ -24,15 +54,12 @@ export default function CartSummary({
     100
   )
 
-  const reachedGoal =
-    Number(total || 0) >=
-    FREE_SHIPPING_GOAL
-
-  const remainingAmount = Math.max(
-    FREE_SHIPPING_GOAL -
-      Number(total || 0),
-    0
-  )
+  const remainingAmount =
+    Math.max(
+      FREE_SHIPPING_GOAL -
+        Number(total || 0),
+      0
+    )
 
   return (
     <div className="flex flex-col p-4 space-y-4">
@@ -45,13 +72,18 @@ export default function CartSummary({
 
         {/* SUBTOTAL */}
         <div className="flex justify-between text-lg">
+
           <span>
             Subtotal
           </span>
 
           <span>
-            ${formatPrice(subtotal)}
+            $
+            {formatPrice(
+              subtotal
+            )}
           </span>
+
         </div>
 
         {/* DESCUENTOS */}
@@ -72,6 +104,87 @@ export default function CartSummary({
           </div>
         )}
 
+        {/* ENVÍO */}
+        <div className="relative flex justify-between items-center text-lg">
+
+          <div className="flex items-center gap-2">
+
+            <span>
+              Costo de envío
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowShippingInfo(
+                  (
+                    previous
+                  ) =>
+                    !previous
+                )
+              }
+              className="
+                flex
+                items-center
+                justify-center
+                text-gray-400
+                hover:text-gray-800
+                transition-colors
+                focus:outline-none
+              "
+              aria-label="Información sobre el costo de envío"
+            >
+              <Info
+                size={17}
+              />
+            </button>
+
+          </div>
+
+          <span
+            className={
+              reachedGoal
+                ? "font-semibold text-green-600"
+                : ""
+            }
+          >
+            {reachedGoal
+              ? "Gratis"
+              : `$${formatPrice(
+                  SHIPPING_COST
+                )}`}
+          </span>
+
+          {/* MENSAJE INFO */}
+          {showShippingInfo && (
+            <div
+              className="
+                absolute
+                left-0
+                top-9
+                z-20
+                w-full
+                max-w-sm
+                bg-white
+                border
+                border-gray-200
+                rounded-xl
+                shadow-lg
+                p-4
+              "
+            >
+              <p className="text-sm text-gray-700 leading-relaxed">
+                El envío tiene un costo estándar de{" "}
+                <span className="font-semibold">
+                  $15.000
+                </span>
+                . Si te encuentras cerca de nuestro punto de ubicación, el envío puede ser gratuito.
+              </p>
+            </div>
+          )}
+
+        </div>
+
         {/* TOTAL */}
         <div className="flex justify-between font-medium text-2xl pt-2">
 
@@ -80,7 +193,10 @@ export default function CartSummary({
           </span>
 
           <span>
-            ${formatPrice(total)}
+            $
+            {formatPrice(
+              finalTotal
+            )}
           </span>
 
         </div>
@@ -104,8 +220,12 @@ export default function CartSummary({
 
             <span className="text-gray-500">
               $
-              {formatPrice(total)}
+              {formatPrice(
+                total
+              )}
+
               {" / "}
+
               $
               {formatPrice(
                 FREE_SHIPPING_GOAL
@@ -131,7 +251,8 @@ export default function CartSummary({
                 }
               `}
               style={{
-                width: `${progress}%`,
+                width:
+                  `${progress}%`,
               }}
             />
 
@@ -146,14 +267,18 @@ export default function CartSummary({
               </p>
             ) : (
               <p className="text-sm text-gray-500">
+
                 Te faltan{" "}
+
                 <span className="font-semibold text-red-600">
                   $
                   {formatPrice(
                     remainingAmount
                   )}
-                </span>{" "}
-                para obtener envío gratis.
+                </span>
+
+                {" "}para obtener envío gratis.
+
               </p>
             )}
 
@@ -183,7 +308,9 @@ export default function CartSummary({
       {/* CHECKOUT */}
       <Button
         className="w-full self-center"
-        onClick={onCheckout}
+        onClick={
+          onCheckout
+        }
       >
         Finalizar compra
       </Button>
