@@ -3,7 +3,7 @@ export const sliderItems = [
     id: 1,
     image: "https://res.cloudinary.com/tyskxzn2/image/upload/v1789766099/e2b992fc-ea07-4951-bd6f-6dac02316b81.jpg",
     title: "OFERTAS DENIMS",
-    desc: "Por lanzamiento 15% de descuento en toda la tienda.",
+    desc: "Por lanzamiento 10% de descuento en toda la tienda.",
     bg: "f5fafd",
     categoryId: "6a8c7515ed5e69696954ae0c"
   },
@@ -11,7 +11,7 @@ export const sliderItems = [
     id: 3,
     image: "https://res.cloudinary.com/tyskxzn2/image/upload/v1787956845/descarga_5.jpg",
     title: "CALZADO",
-    desc: "Por lanzamiento 15% de descuento en toda la tienda.",
+    desc: "Por lanzamiento 10% de descuento en toda la tienda.",
     bg: "fbf0f4",
     categoryId: "6a8c9dd159888543ab70f860"
   }
