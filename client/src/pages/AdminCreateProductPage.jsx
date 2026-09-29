@@ -4,15 +4,15 @@ import React, {
 } from "react"
 
 import {
-  useNavigate,
-} from "react-router-dom"
-
-import {
   Plus,
   Trash2,
   Upload,
   ChevronLeft,
 } from "react-feather"
+
+import {
+  useNavigate,
+} from "react-router-dom"
 
 import api from "@/api"
 
@@ -22,44 +22,141 @@ import {
   useAdminAuth,
 } from "@/context/AdminAuthContext"
 
-const EMPTY_VARIANT = {
-  color: "",
-  codeColor: "#000000",
-  size: "",
-  stock: 0,
+/*
+ * =========================
+ * TALLAS DISPONIBLES
+ * =========================
+ */
+
+const SIZE_GROUPS = [
+  {
+    label: "Ropa",
+    sizes: [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL",
+    ],
+  },
+  {
+    label: "Jeans",
+    sizes: [
+      "28",
+      "30",
+      "32",
+      "34",
+      "36",
+      "38",
+      "40",
+      "42",
+    ],
+  },
+  {
+    label: "Calzado",
+    sizes: [
+      "35",
+      "36",
+      "37",
+      "38",
+      "39",
+      "40",
+      "41",
+      "42",
+      "43",
+      "44",
+    ],
+  },
+]
+
+const EMPTY_COLOR = {
+  name: "",
+  code: "#000000",
+}
+
+const createEmptyColorway = () => ({
+  colors: [
+    {
+      ...EMPTY_COLOR,
+    },
+  ],
+
+  selectedSizes: [],
+
+  stockBySize: {},
+
   price: 0,
+})
+
+/*
+ * Genera automáticamente:
+ *
+ * Blanco + Azul
+ * =>
+ * "Blanco / Azul"
+ */
+
+const buildColorwayName = (
+  colors
+) => {
+  return colors
+    .map(
+      (color) =>
+        color.name.trim()
+    )
+    .filter(Boolean)
+    .join(" / ")
 }
 
 export default function AdminCreateProductPage() {
-  const navigate = useNavigate()
+  const navigate =
+    useNavigate()
 
   const {
     token,
     isAuthenticated,
   } = useAdminAuth()
 
-  const [categories, setCategories] =
-    useState([])
+  const [
+    categories,
+    setCategories,
+  ] = useState([])
 
-  const [loadingCategories, setLoadingCategories] =
-    useState(true)
+  const [
+    loadingCategories,
+    setLoadingCategories,
+  ] = useState(true)
 
-  const [submitting, setSubmitting] =
-    useState(false)
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false)
 
-  const [error, setError] =
-    useState("")
+  const [
+    error,
+    setError,
+  ] = useState("")
 
-  const [success, setSuccess] =
-    useState("")
+  const [
+    success,
+    setSuccess,
+  ] = useState("")
 
-  const [images, setImages] =
-    useState([])
+  const [
+    images,
+    setImages,
+  ] = useState([])
 
-  const [imagePreviews, setImagePreviews] =
-    useState([])
+  const [
+    imagePreviews,
+    setImagePreviews,
+  ] = useState([])
 
-  const [form, setForm] = useState({
+  const [
+    form,
+    setForm,
+  ] = useState({
     name: "",
     description: "",
     gender: "",
@@ -68,15 +165,22 @@ export default function AdminCreateProductPage() {
     discount: 0,
     isActive: true,
     isFeatured: false,
-    variants: [
-      {
-        ...EMPTY_VARIANT,
-      },
+
+    colorways: [
+      createEmptyColorway(),
     ],
   })
 
+  /*
+   * =========================
+   * CATEGORÍAS
+   * =========================
+   */
+
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (
+      !isAuthenticated
+    ) {
       navigate(
         "/admin/login",
         {
@@ -87,53 +191,66 @@ export default function AdminCreateProductPage() {
       return
     }
 
-    const loadCategories = async () => {
-      try {
-        setLoadingCategories(true)
-
-        const response =
-          await api.fetchCategories()
-
-        if (
-          response?.status === "error" ||
-          !response?.success ||
-          !Array.isArray(
-            response?.data
+    const loadCategories =
+      async () => {
+        try {
+          setLoadingCategories(
+            true
           )
-        ) {
+
+          const response =
+            await api.fetchCategories()
+
+          if (
+            response?.status ===
+              "error" ||
+            !response?.success ||
+            !Array.isArray(
+              response?.data
+            )
+          ) {
+            setError(
+              response?.message ||
+                "No fue posible cargar las categorías."
+            )
+
+            return
+          }
+
+          setCategories(
+            response.data.filter(
+              (category) =>
+                category.isActive !==
+                false
+            )
+          )
+        } catch (error) {
+          console.error(
+            "Error loading categories:",
+            error
+          )
+
           setError(
-            response?.message ||
-              "No fue posible cargar las categorías."
+            "No fue posible cargar las categorías."
           )
-
-          return
+        } finally {
+          setLoadingCategories(
+            false
+          )
         }
-
-        setCategories(
-          response.data.filter(
-            (category) =>
-              category.isActive !== false
-          )
-        )
-      } catch (error) {
-        console.error(
-          "Error loading categories:",
-          error
-        )
-
-        setError(
-          "No fue posible cargar las categorías."
-        )
-      } finally {
-        setLoadingCategories(false)
       }
-    }
 
     loadCategories()
   }, [
     isAuthenticated,
     navigate,
   ])
+
+  /*
+   * =========================
+   * LIMPIAR PREVIEWS
+   * =========================
+   */
 
   useEffect(() => {
     return () => {
@@ -145,7 +262,15 @@ export default function AdminCreateProductPage() {
         }
       )
     }
-  }, [imagePreviews])
+  }, [
+    imagePreviews,
+  ])
+
+  /*
+   * =========================
+   * INPUTS GENERALES
+   * =========================
+   */
 
   const handleInputChange = (
     event
@@ -169,80 +294,403 @@ export default function AdminCreateProductPage() {
     )
   }
 
-  const handleVariantChange = (
-    index,
-    field,
-    value
-  ) => {
-    setForm(
-      (currentForm) => {
-        const variants = [
-          ...currentForm.variants,
-        ]
+  /*
+   * =========================
+   * COLORWAYS
+   * =========================
+   */
 
-        variants[index] = {
-          ...variants[index],
-
-          [field]:
-            field === "stock" ||
-            field === "price"
-              ? Number(value)
-              : value,
-        }
-
-        return {
-          ...currentForm,
-          variants,
-        }
-      }
-    )
-  }
-
-  const addVariant = () => {
+  const addColorway = () => {
     setForm(
       (currentForm) => ({
         ...currentForm,
 
-        variants: [
-          ...currentForm.variants,
-
-          {
-            ...EMPTY_VARIANT,
-          },
+        colorways: [
+          ...currentForm.colorways,
+          createEmptyColorway(),
         ],
       })
     )
   }
 
-  const removeVariant = (
-    index
+  const removeColorway = (
+    colorwayIndex
   ) => {
     if (
-      form.variants.length === 1
+      form.colorways.length ===
+      1
     ) {
       setError(
-        "El producto debe tener al menos una variante."
+        "El producto debe tener al menos una combinación de color."
       )
 
       return
     }
 
+    setError("")
+
     setForm(
       (currentForm) => ({
         ...currentForm,
 
-        variants:
-          currentForm.variants.filter(
+        colorways:
+          currentForm.colorways.filter(
             (
-              _variant,
-              variantIndex
-            ) =>
-              variantIndex !==
+              _colorway,
               index
+            ) =>
+              index !==
+              colorwayIndex
           ),
       })
     )
   }
+
+  /*
+   * =========================
+   * COLORES
+   * =========================
+   */
+
+  const addColor = (
+    colorwayIndex
+  ) => {
+    setForm(
+      (currentForm) => {
+        const colorways =
+          currentForm.colorways.map(
+            (
+              colorway,
+              index
+            ) => {
+              if (
+                index !==
+                colorwayIndex
+              ) {
+                return colorway
+              }
+
+              if (
+                colorway.colors
+                  .length >= 4
+              ) {
+                return colorway
+              }
+
+              return {
+                ...colorway,
+
+                colors: [
+                  ...colorway.colors,
+                  {
+                    ...EMPTY_COLOR,
+                  },
+                ],
+              }
+            }
+          )
+
+        return {
+          ...currentForm,
+          colorways,
+        }
+      }
+    )
+  }
+
+  const removeColor = (
+    colorwayIndex,
+    colorIndex
+  ) => {
+    setForm(
+      (currentForm) => {
+        const colorways =
+          currentForm.colorways.map(
+            (
+              colorway,
+              index
+            ) => {
+              if (
+                index !==
+                colorwayIndex
+              ) {
+                return colorway
+              }
+
+              if (
+                colorway.colors
+                  .length === 1
+              ) {
+                return colorway
+              }
+
+              return {
+                ...colorway,
+
+                colors:
+                  colorway.colors.filter(
+                    (
+                      _color,
+                      indexColor
+                    ) =>
+                      indexColor !==
+                      colorIndex
+                  ),
+              }
+            }
+          )
+
+        return {
+          ...currentForm,
+          colorways,
+        }
+      }
+    )
+  }
+
+  const handleColorChange = (
+    colorwayIndex,
+    colorIndex,
+    field,
+    value
+  ) => {
+    setForm(
+      (currentForm) => {
+        const colorways =
+          currentForm.colorways.map(
+            (
+              colorway,
+              index
+            ) => {
+              if (
+                index !==
+                colorwayIndex
+              ) {
+                return colorway
+              }
+
+              const colors =
+                colorway.colors.map(
+                  (
+                    color,
+                    indexColor
+                  ) => {
+                    if (
+                      indexColor !==
+                      colorIndex
+                    ) {
+                      return color
+                    }
+
+                    return {
+                      ...color,
+
+                      [field]:
+                        value,
+                    }
+                  }
+                )
+
+              return {
+                ...colorway,
+                colors,
+              }
+            }
+          )
+
+        return {
+          ...currentForm,
+          colorways,
+        }
+      }
+    )
+  }
+
+  /*
+   * =========================
+   * TALLAS
+   * =========================
+   */
+
+  const toggleSize = (
+    colorwayIndex,
+    size
+  ) => {
+    setForm(
+      (currentForm) => {
+        const colorways =
+          currentForm.colorways.map(
+            (
+              colorway,
+              index
+            ) => {
+              if (
+                index !==
+                colorwayIndex
+              ) {
+                return colorway
+              }
+
+              const alreadySelected =
+                colorway.selectedSizes.includes(
+                  size
+                )
+
+              if (
+                alreadySelected
+              ) {
+                const {
+                  [size]:
+                    _removedStock,
+                  ...remainingStock
+                } =
+                  colorway.stockBySize
+
+                return {
+                  ...colorway,
+
+                  selectedSizes:
+                    colorway.selectedSizes.filter(
+                      (
+                        selectedSize
+                      ) =>
+                        selectedSize !==
+                        size
+                    ),
+
+                  stockBySize:
+                    remainingStock,
+                }
+              }
+
+              return {
+                ...colorway,
+
+                selectedSizes: [
+                  ...colorway.selectedSizes,
+                  size,
+                ],
+
+                stockBySize: {
+                  ...colorway.stockBySize,
+
+                  [size]:
+                    colorway
+                      .stockBySize[
+                      size
+                    ] ?? 0,
+                },
+              }
+            }
+          )
+
+        return {
+          ...currentForm,
+          colorways,
+        }
+      }
+    )
+  }
+
+  /*
+   * =========================
+   * STOCK POR TALLA
+   * =========================
+   */
+
+  const handleStockChange = (
+    colorwayIndex,
+    size,
+    value
+  ) => {
+    setForm(
+      (currentForm) => {
+        const colorways =
+          currentForm.colorways.map(
+            (
+              colorway,
+              index
+            ) => {
+              if (
+                index !==
+                colorwayIndex
+              ) {
+                return colorway
+              }
+
+              return {
+                ...colorway,
+
+                stockBySize: {
+                  ...colorway.stockBySize,
+
+                  [size]:
+                    Number(
+                      value
+                    ),
+                },
+              }
+            }
+          )
+
+        return {
+          ...currentForm,
+          colorways,
+        }
+      }
+    )
+  }
+
+  /*
+   * =========================
+   * PRECIO DEL COLORWAY
+   * =========================
+   */
+
+  const handleColorwayPriceChange =
+    (
+      colorwayIndex,
+      value
+    ) => {
+      setForm(
+        (currentForm) => {
+          const colorways =
+            currentForm.colorways.map(
+              (
+                colorway,
+                index
+              ) => {
+                if (
+                  index !==
+                  colorwayIndex
+                ) {
+                  return colorway
+                }
+
+                return {
+                  ...colorway,
+
+                  price:
+                    Number(
+                      value
+                    ),
+                }
+              }
+            )
+
+          return {
+            ...currentForm,
+            colorways,
+          }
+        }
+      )
+    }
+
+  /*
+   * =========================
+   * IMÁGENES
+   * =========================
+   */
 
   const handleImagesChange = (
     event
@@ -275,8 +723,16 @@ export default function AdminCreateProductPage() {
     )
   }
 
+  /*
+   * =========================
+   * VALIDACIÓN
+   * =========================
+   */
+
   const validateForm = () => {
-    if (!form.name.trim()) {
+    if (
+      !form.name.trim()
+    ) {
       return "El nombre es obligatorio."
     }
 
@@ -286,71 +742,241 @@ export default function AdminCreateProductPage() {
       return "La descripción es obligatoria."
     }
 
-    if (!form.gender.trim()) {
+    if (
+      !form.gender.trim()
+    ) {
       return "Selecciona el género."
     }
 
-    if (!form.category) {
+    if (
+      !form.category
+    ) {
       return "Selecciona una categoría."
     }
 
     const discount =
-      Number(form.discount)
+      Number(
+        form.discount
+      )
 
     if (
-      Number.isNaN(discount) ||
+      Number.isNaN(
+        discount
+      ) ||
       discount < 0 ||
       discount > 100
     ) {
       return "El descuento debe estar entre 0 y 100."
     }
 
-    if (!images.length) {
+    if (
+      !images.length
+    ) {
       return "Debes seleccionar al menos una imagen."
     }
+
+    if (
+      !form.colorways.length
+    ) {
+      return "Debes agregar al menos una combinación de color."
+    }
+
+    const colorwayNames =
+      new Set()
 
     for (
       let index = 0;
       index <
-      form.variants.length;
+      form.colorways.length;
       index += 1
     ) {
-      const variant =
-        form.variants[index]
+      const colorway =
+        form.colorways[
+          index
+        ]
 
       if (
-        !variant.color.trim() ||
-        !variant.codeColor.trim() ||
-        !variant.size.trim()
+        !Array.isArray(
+          colorway.colors
+        ) ||
+        colorway.colors.length <
+          1 ||
+        colorway.colors.length >
+          4
       ) {
-        return `Completa todos los datos de la variante ${
+        return `La combinación ${
           index + 1
-        }.`
+        } debe tener entre 1 y 4 colores.`
+      }
+
+      for (
+        let colorIndex = 0;
+        colorIndex <
+        colorway.colors
+          .length;
+        colorIndex += 1
+      ) {
+        const color =
+          colorway.colors[
+            colorIndex
+          ]
+
+        if (
+          !color.name.trim()
+        ) {
+          return `Ingresa el nombre del color ${
+            colorIndex + 1
+          } de la combinación ${
+            index + 1
+          }.`
+        }
+
+        if (
+          !color.code.trim()
+        ) {
+          return `Ingresa el código del color ${
+            colorIndex + 1
+          } de la combinación ${
+            index + 1
+          }.`
+        }
+
+        const validHex =
+          /^#([0-9A-F]{3}|[0-9A-F]{6})$/i.test(
+            color.code.trim()
+          )
+
+        if (!validHex) {
+          return `El código ${color.code} no es un color hexadecimal válido.`
+        }
+      }
+
+      const colorwayName =
+        buildColorwayName(
+          colorway.colors
+        )
+
+      const normalizedName =
+        colorwayName
+          .toLowerCase()
+
+      if (
+        colorwayNames.has(
+          normalizedName
+        )
+      ) {
+        return `La combinación "${colorwayName}" está repetida.`
+      }
+
+      colorwayNames.add(
+        normalizedName
+      )
+
+      if (
+        colorway.selectedSizes
+          .length === 0
+      ) {
+        return `Selecciona al menos una talla para "${colorwayName}".`
       }
 
       if (
+        Number.isNaN(
+          Number(
+            colorway.price
+          )
+        ) ||
         Number(
-          variant.stock
+          colorway.price
         ) < 0
       ) {
-        return `El stock de la variante ${
-          index + 1
-        } no puede ser negativo.`
+        return `El precio de "${colorwayName}" no es válido.`
       }
 
-      if (
-        Number(
-          variant.price
-        ) < 0
+      for (
+        const size of
+        colorway.selectedSizes
       ) {
-        return `El precio de la variante ${
-          index + 1
-        } no puede ser negativo.`
+        const stock =
+          Number(
+            colorway
+              .stockBySize[
+              size
+            ]
+          )
+
+        if (
+          Number.isNaN(
+            stock
+          ) ||
+          stock < 0
+        ) {
+          return `El stock de la talla ${size} en "${colorwayName}" no es válido.`
+        }
       }
     }
 
     return null
   }
+
+  /*
+   * =========================
+   * CREAR VARIANTES
+   * =========================
+   */
+
+  const buildVariants =
+    () => {
+      return form.colorways.flatMap(
+        (colorway) => {
+          const colors =
+            colorway.colors.map(
+              (color) => ({
+                name:
+                  color.name.trim(),
+
+                code:
+                  color.code
+                    .trim()
+                    .toUpperCase(),
+              })
+            )
+
+          const color =
+            buildColorwayName(
+              colors
+            )
+
+          return colorway.selectedSizes.map(
+            (size) => ({
+              color,
+
+              colors,
+
+              size,
+
+              stock:
+                Number(
+                  colorway
+                    .stockBySize[
+                    size
+                  ]
+                ) || 0,
+
+              price:
+                Number(
+                  colorway.price
+                ) || 0,
+            })
+          )
+        }
+      )
+    }
+
+  /*
+   * =========================
+   * SUBMIT
+   * =========================
+   */
 
   const handleSubmit = async (
     event
@@ -360,7 +986,9 @@ export default function AdminCreateProductPage() {
     const validationError =
       validateForm()
 
-    if (validationError) {
+    if (
+      validationError
+    ) {
       setError(
         validationError
       )
@@ -371,7 +999,10 @@ export default function AdminCreateProductPage() {
     }
 
     try {
-      setSubmitting(true)
+      setSubmitting(
+        true
+      )
+
       setError("")
       setSuccess("")
 
@@ -403,28 +1034,7 @@ export default function AdminCreateProductPage() {
           form.isFeatured,
 
         variants:
-          form.variants.map(
-            (variant) => ({
-              color:
-                variant.color.trim(),
-
-              codeColor:
-                variant.codeColor.trim(),
-
-              size:
-                variant.size.trim(),
-
-              stock:
-                Number(
-                  variant.stock
-                ),
-
-              price:
-                Number(
-                  variant.price
-                ),
-            })
-          ),
+          buildVariants(),
       }
 
       const response =
@@ -466,7 +1076,9 @@ export default function AdminCreateProductPage() {
         "Ocurrió un error creando el producto."
       )
     } finally {
-      setSubmitting(false)
+      setSubmitting(
+        false
+      )
     }
   }
 
@@ -479,6 +1091,7 @@ export default function AdminCreateProductPage() {
         <div className="flex items-center justify-between mb-8">
 
           <div>
+
             <h1 className="text-3xl font-bold text-gray-900">
               Crear producto
             </h1>
@@ -486,6 +1099,7 @@ export default function AdminCreateProductPage() {
             <p className="text-gray-500 mt-1">
               Registra un nuevo producto en la tienda.
             </p>
+
           </div>
 
           <Button
@@ -510,7 +1124,10 @@ export default function AdminCreateProductPage() {
           className="space-y-8"
         >
 
+          {/* ===================================== */}
           {/* INFORMACIÓN GENERAL */}
+          {/* ===================================== */}
+
           <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
 
             <h2 className="text-xl font-bold text-gray-900 mb-6">
@@ -519,7 +1136,9 @@ export default function AdminCreateProductPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
+              {/* NOMBRE */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Nombre *
                 </label>
@@ -527,7 +1146,9 @@ export default function AdminCreateProductPage() {
                 <input
                   type="text"
                   name="name"
-                  value={form.name}
+                  value={
+                    form.name
+                  }
                   onChange={
                     handleInputChange
                   }
@@ -543,9 +1164,12 @@ export default function AdminCreateProductPage() {
                     focus:border-gray-900
                   "
                 />
+
               </div>
 
+              {/* MARCA */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Marca
                 </label>
@@ -553,7 +1177,9 @@ export default function AdminCreateProductPage() {
                 <input
                   type="text"
                   name="brand"
-                  value={form.brand}
+                  value={
+                    form.brand
+                  }
                   onChange={
                     handleInputChange
                   }
@@ -569,16 +1195,21 @@ export default function AdminCreateProductPage() {
                     focus:border-gray-900
                   "
                 />
+
               </div>
 
+              {/* GÉNERO */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Género *
                 </label>
 
                 <select
                   name="gender"
-                  value={form.gender}
+                  value={
+                    form.gender
+                  }
                   onChange={
                     handleInputChange
                   }
@@ -609,10 +1240,14 @@ export default function AdminCreateProductPage() {
                   <option value="Unisex">
                     Unisex
                   </option>
+
                 </select>
+
               </div>
 
+              {/* CATEGORÍA */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Categoría *
                 </label>
@@ -647,7 +1282,9 @@ export default function AdminCreateProductPage() {
                   </option>
 
                   {categories.map(
-                    (category) => (
+                    (
+                      category
+                    ) => (
                       <option
                         key={
                           category._id
@@ -662,10 +1299,14 @@ export default function AdminCreateProductPage() {
                       </option>
                     )
                   )}
+
                 </select>
+
               </div>
 
+              {/* DESCUENTO */}
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Descuento %
                 </label>
@@ -693,10 +1334,12 @@ export default function AdminCreateProductPage() {
                     focus:border-gray-900
                   "
                 />
+
               </div>
 
             </div>
 
+            {/* DESCRIPCIÓN */}
             <div className="mt-5">
 
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -772,304 +1415,639 @@ export default function AdminCreateProductPage() {
 
           </section>
 
-          {/* VARIANTES */}
+          {/* ===================================== */}
+          {/* COLORES Y TALLAS */}
+          {/* ===================================== */}
+
           <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
 
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
 
               <div>
+
                 <h2 className="text-xl font-bold text-gray-900">
-                  Variantes
+                  Colores y tallas
                 </h2>
 
                 <p className="text-sm text-gray-500 mt-1">
-                  Define color, talla, stock y precio.
+                  Agrega las combinaciones de colores y selecciona las tallas disponibles.
                 </p>
+
               </div>
 
               <Button
                 type="button"
                 secondary
                 onClick={
-                  addVariant
+                  addColorway
                 }
               >
                 <Plus className="mr-2" />
 
-                Agregar variante
+                Agregar combinación
               </Button>
 
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
 
-              {form.variants.map(
+              {form.colorways.map(
                 (
-                  variant,
-                  index
-                ) => (
-                  <div
-                    key={index}
-                    className="
-                      border
-                      border-gray-200
-                      rounded-xl
-                      p-4
-                    "
-                  >
+                  colorway,
+                  colorwayIndex
+                ) => {
+                  const colorwayName =
+                    buildColorwayName(
+                      colorway.colors
+                    )
 
-                    <div className="flex justify-between items-center mb-4">
+                  return (
+                    <div
+                      key={
+                        colorwayIndex
+                      }
+                      className="
+                        border
+                        border-gray-200
+                        rounded-2xl
+                        overflow-hidden
+                      "
+                    >
 
-                      <h3 className="font-semibold text-gray-800">
-                        Variante{" "}
-                        {index + 1}
-                      </h3>
+                      {/* CABECERA COLORWAY */}
+                      <div className="flex justify-between items-center bg-gray-50 border-b border-gray-200 px-5 py-4">
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removeVariant(
-                            index
-                          )
-                        }
-                        className="
-                          text-gray-400
-                          hover:text-red-600
-                          transition-colors
-                        "
-                      >
-                        <Trash2
-                          size={20}
-                        />
-                      </button>
+                        <div>
 
-                    </div>
+                          <p className="text-xs font-semibold uppercase text-gray-500">
+                            Combinación{" "}
+                            {colorwayIndex +
+                              1}
+                          </p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                          <h3 className="font-bold text-lg text-gray-900 mt-1">
+                            {colorwayName ||
+                              "Sin definir"}
+                          </h3>
 
-                      {/* COLOR */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Color
-                        </label>
+                        </div>
 
-                        <input
-                          type="text"
-                          value={
-                            variant.color
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            handleVariantChange(
-                              index,
-                              "color",
-                              event
-                                .target
-                                .value
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeColorway(
+                              colorwayIndex
                             )
                           }
-                          placeholder="Negro"
                           className="
-                            w-full
-                            border
-                            border-gray-300
+                            p-2
+                            text-gray-400
+                            hover:text-red-600
+                            hover:bg-red-50
                             rounded-lg
-                            px-3
-                            py-2
-                            focus:outline-none
-                            focus:border-gray-900
+                            transition-colors
                           "
-                        />
+                          title="Eliminar combinación"
+                        >
+                          <Trash2
+                            size={
+                              20
+                            }
+                          />
+                        </button>
+
                       </div>
 
-                      {/* CODE COLOR */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Código
-                        </label>
+                      <div className="p-5 space-y-7">
 
-                        <div className="flex gap-2">
+                        {/* ===================================== */}
+                        {/* COLORES */}
+                        {/* ===================================== */}
+
+                        <div>
+
+                          <div className="flex items-center justify-between gap-4 mb-4">
+
+                            <div>
+
+                              <h4 className="font-semibold text-gray-900">
+                                Colores
+                              </h4>
+
+                              <p className="text-sm text-gray-500 mt-1">
+                                Puedes agregar entre 1 y 4 colores para esta combinación.
+                              </p>
+
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={
+                                colorway
+                                  .colors
+                                  .length >=
+                                4
+                              }
+                              onClick={() =>
+                                addColor(
+                                  colorwayIndex
+                                )
+                              }
+                              className="
+                                flex
+                                items-center
+                                text-sm
+                                font-semibold
+                                text-gray-700
+                                hover:text-black
+                                disabled:text-gray-300
+                                disabled:cursor-not-allowed
+                              "
+                            >
+                              <Plus
+                                size={
+                                  17
+                                }
+                                className="mr-1"
+                              />
+
+                              Agregar color
+                            </button>
+
+                          </div>
+
+                          <div className="space-y-3">
+
+                            {colorway.colors.map(
+                              (
+                                color,
+                                colorIndex
+                              ) => (
+                                <div
+                                  key={
+                                    colorIndex
+                                  }
+                                  className="
+                                    grid
+                                    grid-cols-1
+                                    sm:grid-cols-[1fr_180px_44px]
+                                    gap-3
+                                    items-end
+                                  "
+                                >
+
+                                  {/* NOMBRE COLOR */}
+                                  <div>
+
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                      Color{" "}
+                                      {colorIndex +
+                                        1}
+                                    </label>
+
+                                    <input
+                                      type="text"
+                                      value={
+                                        color.name
+                                      }
+                                      onChange={(
+                                        event
+                                      ) =>
+                                        handleColorChange(
+                                          colorwayIndex,
+                                          colorIndex,
+                                          "name",
+                                          event
+                                            .target
+                                            .value
+                                        )
+                                      }
+                                      placeholder="Ej. Blanco"
+                                      className="
+                                        w-full
+                                        border
+                                        border-gray-300
+                                        rounded-lg
+                                        px-3
+                                        py-2
+                                        focus:outline-none
+                                        focus:border-gray-900
+                                      "
+                                    />
+
+                                  </div>
+
+                                  {/* CÓDIGO COLOR */}
+                                  <div>
+
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                      Código
+                                    </label>
+
+                                    <div className="flex gap-2">
+
+                                      <input
+                                        type="color"
+                                        value={
+                                          color.code
+                                        }
+                                        onChange={(
+                                          event
+                                        ) =>
+                                          handleColorChange(
+                                            colorwayIndex,
+                                            colorIndex,
+                                            "code",
+                                            event
+                                              .target
+                                              .value
+                                          )
+                                        }
+                                        className="
+                                          w-12
+                                          h-10
+                                          border
+                                          border-gray-300
+                                          rounded-lg
+                                          cursor-pointer
+                                        "
+                                      />
+
+                                      <input
+                                        type="text"
+                                        value={
+                                          color.code
+                                        }
+                                        onChange={(
+                                          event
+                                        ) =>
+                                          handleColorChange(
+                                            colorwayIndex,
+                                            colorIndex,
+                                            "code",
+                                            event
+                                              .target
+                                              .value
+                                          )
+                                        }
+                                        className="
+                                          min-w-0
+                                          flex-1
+                                          border
+                                          border-gray-300
+                                          rounded-lg
+                                          px-3
+                                          py-2
+                                          focus:outline-none
+                                          focus:border-gray-900
+                                        "
+                                      />
+
+                                    </div>
+
+                                  </div>
+
+                                  {/* ELIMINAR COLOR */}
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      colorway
+                                        .colors
+                                        .length ===
+                                      1
+                                    }
+                                    onClick={() =>
+                                      removeColor(
+                                        colorwayIndex,
+                                        colorIndex
+                                      )
+                                    }
+                                    className="
+                                      h-10
+                                      flex
+                                      items-center
+                                      justify-center
+                                      text-gray-400
+                                      hover:text-red-600
+                                      rounded-lg
+                                      hover:bg-red-50
+                                      disabled:text-gray-200
+                                      disabled:cursor-not-allowed
+                                    "
+                                    title="Eliminar color"
+                                  >
+                                    <Trash2
+                                      size={
+                                        18
+                                      }
+                                    />
+                                  </button>
+
+                                </div>
+                              )
+                            )}
+
+                          </div>
+
+                          {/* PREVIEW COLORWAY */}
+                          <div className="mt-5">
+
+                            <p className="text-sm font-semibold text-gray-700 mb-2">
+                              Vista previa
+                            </p>
+
+                            <div className="flex items-center gap-3">
+
+                              <div
+                                className="
+                                  flex
+                                  w-24
+                                  h-9
+                                  border
+                                  border-gray-300
+                                  rounded-lg
+                                  overflow-hidden
+                                  bg-gray-100
+                                "
+                              >
+                                {colorway.colors.map(
+                                  (
+                                    color,
+                                    index
+                                  ) => (
+                                    <div
+                                      key={
+                                        index
+                                      }
+                                      style={{
+                                        backgroundColor:
+                                          color.code,
+                                        width: `${
+                                          100 /
+                                          colorway
+                                            .colors
+                                            .length
+                                        }%`,
+                                      }}
+                                      title={
+                                        color.name ||
+                                        `Color ${
+                                          index +
+                                          1
+                                        }`
+                                      }
+                                    />
+                                  )
+                                )}
+                              </div>
+
+                              <span className="text-sm font-semibold text-gray-700">
+                                {colorwayName ||
+                                  "Agrega los nombres de los colores"}
+                              </span>
+
+                            </div>
+
+                          </div>
+
+                        </div>
+
+                        {/* ===================================== */}
+                        {/* PRECIO */}
+                        {/* ===================================== */}
+
+                        <div className="max-w-xs">
+
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Precio *
+                          </label>
 
                           <input
-                            type="color"
+                            type="number"
+                            min="0"
+                            step="100"
                             value={
-                              variant.codeColor
+                              colorway.price
                             }
                             onChange={(
                               event
                             ) =>
-                              handleVariantChange(
-                                index,
-                                "codeColor",
+                              handleColorwayPriceChange(
+                                colorwayIndex,
                                 event
                                   .target
                                   .value
                               )
                             }
                             className="
-                              w-12
-                              h-10
+                              w-full
                               border
                               border-gray-300
                               rounded-lg
-                              cursor-pointer
-                            "
-                          />
-
-                          <input
-                            type="text"
-                            value={
-                              variant.codeColor
-                            }
-                            onChange={(
-                              event
-                            ) =>
-                              handleVariantChange(
-                                index,
-                                "codeColor",
-                                event
-                                  .target
-                                  .value
-                              )
-                            }
-                            className="
-                              min-w-0
-                              flex-1
-                              border
-                              border-gray-300
-                              rounded-lg
-                              px-3
-                              py-2
+                              px-4
+                              py-3
                               focus:outline-none
                               focus:border-gray-900
                             "
                           />
 
+                          <p className="text-xs text-gray-500 mt-1">
+                            Este precio se aplicará a todas las tallas de esta combinación.
+                          </p>
+
                         </div>
-                      </div>
 
-                      {/* TALLA */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Talla
-                        </label>
+                        {/* ===================================== */}
+                        {/* TALLAS */}
+                        {/* ===================================== */}
 
-                        <input
-                          type="text"
-                          value={
-                            variant.size
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            handleVariantChange(
-                              index,
-                              "size",
-                              event
-                                .target
-                                .value
-                            )
-                          }
-                          placeholder="M / 38"
-                          className="
-                            w-full
-                            border
-                            border-gray-300
-                            rounded-lg
-                            px-3
-                            py-2
-                            focus:outline-none
-                            focus:border-gray-900
-                          "
-                        />
-                      </div>
+                        <div>
 
-                      {/* STOCK */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Stock
-                        </label>
+                          <h4 className="font-semibold text-gray-900">
+                            Tallas disponibles
+                          </h4>
 
-                        <input
-                          type="number"
-                          value={
-                            variant.stock
-                          }
-                          min="0"
-                          step="1"
-                          onChange={(
-                            event
-                          ) =>
-                            handleVariantChange(
-                              index,
-                              "stock",
-                              event
-                                .target
-                                .value
-                            )
-                          }
-                          className="
-                            w-full
-                            border
-                            border-gray-300
-                            rounded-lg
-                            px-3
-                            py-2
-                            focus:outline-none
-                            focus:border-gray-900
-                          "
-                        />
-                      </div>
+                          <p className="text-sm text-gray-500 mt-1">
+                            Selecciona las tallas disponibles para esta combinación.
+                          </p>
 
-                      {/* PRECIO */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Precio
-                        </label>
+                          <div className="space-y-5 mt-5">
 
-                        <input
-                          type="number"
-                          value={
-                            variant.price
-                          }
-                          min="0"
-                          step="100"
-                          onChange={(
-                            event
-                          ) =>
-                            handleVariantChange(
-                              index,
-                              "price",
-                              event
-                                .target
-                                .value
-                            )
-                          }
-                          className="
-                            w-full
-                            border
-                            border-gray-300
-                            rounded-lg
-                            px-3
-                            py-2
-                            focus:outline-none
-                            focus:border-gray-900
-                          "
-                        />
+                            {SIZE_GROUPS.map(
+                              (
+                                group
+                              ) => (
+                                <div
+                                  key={
+                                    group.label
+                                  }
+                                >
+
+                                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                                    {
+                                      group.label
+                                    }
+                                  </p>
+
+                                  <div className="flex flex-wrap gap-2">
+
+                                    {group.sizes.map(
+                                      (
+                                        size
+                                      ) => {
+                                        const selected =
+                                          colorway.selectedSizes.includes(
+                                            size
+                                          )
+
+                                        return (
+                                          <button
+                                            key={`${group.label}-${size}`}
+                                            type="button"
+                                            onClick={() =>
+                                              toggleSize(
+                                                colorwayIndex,
+                                                size
+                                              )
+                                            }
+                                            className={`
+                                              min-w-12
+                                              px-3
+                                              py-2
+                                              border
+                                              rounded-lg
+                                              text-sm
+                                              font-semibold
+                                              transition-colors
+
+                                              ${
+                                                selected
+                                                  ? "bg-gray-900 border-gray-900 text-white"
+                                                  : "bg-white border-gray-300 text-gray-700 hover:border-gray-700"
+                                              }
+                                            `}
+                                          >
+                                            {
+                                              size
+                                            }
+                                          </button>
+                                        )
+                                      }
+                                    )}
+
+                                  </div>
+
+                                </div>
+                              )
+                            )}
+
+                          </div>
+
+                        </div>
+
+                        {/* ===================================== */}
+                        {/* STOCK POR TALLA */}
+                        {/* ===================================== */}
+
+                        {colorway
+                          .selectedSizes
+                          .length >
+                          0 && (
+                          <div>
+
+                            <h4 className="font-semibold text-gray-900">
+                              Stock por talla
+                            </h4>
+
+                            <p className="text-sm text-gray-500 mt-1">
+                              Indica cuántas unidades tienes disponibles de cada talla.
+                            </p>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mt-4">
+
+                              {colorway.selectedSizes.map(
+                                (
+                                  size
+                                ) => (
+                                  <div
+                                    key={
+                                      size
+                                    }
+                                    className="
+                                      border
+                                      border-gray-200
+                                      rounded-xl
+                                      p-3
+                                      bg-gray-50
+                                    "
+                                  >
+
+                                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                                      Talla{" "}
+                                      {
+                                        size
+                                      }
+                                    </label>
+
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="1"
+                                      value={
+                                        colorway
+                                          .stockBySize[
+                                          size
+                                        ] ??
+                                        0
+                                      }
+                                      onChange={(
+                                        event
+                                      ) =>
+                                        handleStockChange(
+                                          colorwayIndex,
+                                          size,
+                                          event
+                                            .target
+                                            .value
+                                        )
+                                      }
+                                      className="
+                                        w-full
+                                        border
+                                        border-gray-300
+                                        rounded-lg
+                                        px-3
+                                        py-2
+                                        bg-white
+                                        focus:outline-none
+                                        focus:border-gray-900
+                                      "
+                                    />
+
+                                  </div>
+                                )
+                              )}
+
+                            </div>
+
+                          </div>
+                        )}
+
                       </div>
 
                     </div>
-
-                  </div>
-                )
+                  )
+                }
               )}
 
             </div>
 
           </section>
 
+          {/* ===================================== */}
           {/* IMÁGENES */}
+          {/* ===================================== */}
+
           <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
 
             <h2 className="text-xl font-bold text-gray-900">
@@ -1097,7 +2075,6 @@ export default function AdminCreateProductPage() {
                 transition-colors
               "
             >
-
               <Upload
                 size={32}
                 className="text-gray-400"
@@ -1123,7 +2100,8 @@ export default function AdminCreateProductPage() {
 
             </label>
 
-            {imagePreviews.length > 0 && (
+            {imagePreviews.length >
+              0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
 
                 {imagePreviews.map(
@@ -1132,7 +2110,9 @@ export default function AdminCreateProductPage() {
                     index
                   ) => (
                     <div
-                      key={preview}
+                      key={
+                        preview
+                      }
                       className="
                         relative
                         rounded-xl
@@ -1146,7 +2126,8 @@ export default function AdminCreateProductPage() {
                           preview
                         }
                         alt={`Preview ${
-                          index + 1
+                          index +
+                          1
                         }`}
                         className="
                           w-full
@@ -1155,7 +2136,8 @@ export default function AdminCreateProductPage() {
                         "
                       />
 
-                      {index === 0 && (
+                      {index ===
+                        0 && (
                         <span
                           className="
                             absolute
