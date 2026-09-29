@@ -16,14 +16,20 @@ const buildSlug = (value) => {
     .replace(/^-+|-+$/g, "");
 };
 
-const buildUniqueSlug = async (name, excludeProductId = null) => {
+const buildUniqueSlug = async (
+  name,
+  excludeProductId = null
+) => {
   const baseSlug = buildSlug(name);
 
   let slug = baseSlug;
+
   let counter = 2;
 
   const buildQuery = () => {
-    const query = { slug };
+    const query = {
+      slug,
+    };
 
     if (excludeProductId) {
       query._id = {
@@ -34,16 +40,27 @@ const buildUniqueSlug = async (name, excludeProductId = null) => {
     return query;
   };
 
-  while (await Product.exists(buildQuery())) {
+  while (
+    await Product.exists(
+      buildQuery()
+    )
+  ) {
     slug = `${baseSlug}-${counter}`;
+
     counter += 1;
   }
 
   return slug;
 };
 
-const validateCategory = async (categoryId) => {
-  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+const validateCategory = async (
+  categoryId
+) => {
+  if (
+    !mongoose.Types.ObjectId.isValid(
+      categoryId
+    )
+  ) {
     throw new AppError(
       "Invalid category id",
       400,
@@ -51,7 +68,10 @@ const validateCategory = async (categoryId) => {
     );
   }
 
-  const category = await Category.findById(categoryId);
+  const category =
+    await Category.findById(
+      categoryId
+    );
 
   if (!category) {
     throw new AppError(
@@ -72,8 +92,13 @@ const validateCategory = async (categoryId) => {
   return category;
 };
 
-const validateVariants = (variants) => {
-  if (!Array.isArray(variants) || variants.length === 0) {
+const validateVariants = (
+  variants
+) => {
+  if (
+    !Array.isArray(variants) ||
+    variants.length === 0
+  ) {
     throw new AppError(
       "At least one product variant is required",
       400,
@@ -81,23 +106,105 @@ const validateVariants = (variants) => {
     );
   }
 
-  const duplicatedVariants = new Set();
+  const duplicatedVariants =
+    new Set();
 
   for (const variant of variants) {
-    const color = variant.color?.trim();
-    const size = variant.size?.trim().toUpperCase();
-    const codeColor = variant.codeColor?.trim();
+    const color =
+      variant.color?.trim();
 
-    if (!color || !size || !codeColor) {
+    const size =
+      variant.size
+        ?.trim()
+        .toUpperCase();
+
+    if (
+      !color ||
+      !size
+    ) {
       throw new AppError(
-        "Variant color, size, and code color are required",
+        "Variant color and size are required",
         400,
         "INVALID_PRODUCT_VARIANT"
       );
     }
 
     if (
-      typeof variant.stock !== "number" ||
+      !Array.isArray(
+        variant.colors
+      ) ||
+      variant.colors.length <
+        1 ||
+      variant.colors.length >
+        4
+    ) {
+      throw new AppError(
+        "Variant must contain between 1 and 4 colors",
+        400,
+        "INVALID_PRODUCT_VARIANT_COLORS"
+      );
+    }
+
+    const duplicatedColors =
+      new Set();
+
+    for (
+      const variantColor of
+      variant.colors
+    ) {
+      const colorName =
+        variantColor.name?.trim();
+
+      const colorCode =
+        variantColor.code?.trim();
+
+      if (
+        !colorName ||
+        !colorCode
+      ) {
+        throw new AppError(
+          "Each variant color must contain name and code",
+          400,
+          "INVALID_PRODUCT_VARIANT_COLOR"
+        );
+      }
+
+      const isValidHex =
+        /^#([0-9A-F]{3}|[0-9A-F]{6})$/i.test(
+          colorCode
+        );
+
+      if (!isValidHex) {
+        throw new AppError(
+          `Invalid color code: ${colorCode}`,
+          400,
+          "INVALID_PRODUCT_COLOR_CODE"
+        );
+      }
+
+      const colorKey =
+        `${colorName.toLowerCase()}-${colorCode.toLowerCase()}`;
+
+      if (
+        duplicatedColors.has(
+          colorKey
+        )
+      ) {
+        throw new AppError(
+          `Duplicated color in variant: ${colorName}`,
+          400,
+          "DUPLICATED_PRODUCT_VARIANT_COLOR"
+        );
+      }
+
+      duplicatedColors.add(
+        colorKey
+      );
+    }
+
+    if (
+      typeof variant.stock !==
+        "number" ||
       variant.stock < 0
     ) {
       throw new AppError(
@@ -108,7 +215,8 @@ const validateVariants = (variants) => {
     }
 
     if (
-      typeof variant.price !== "number" ||
+      typeof variant.price !==
+        "number" ||
       variant.price < 0
     ) {
       throw new AppError(
@@ -118,9 +226,14 @@ const validateVariants = (variants) => {
       );
     }
 
-    const key = `${color.toLowerCase()}-${size}`;
+    const key =
+      `${color.toLowerCase()}-${size}`;
 
-    if (duplicatedVariants.has(key)) {
+    if (
+      duplicatedVariants.has(
+        key
+      )
+    ) {
       throw new AppError(
         `Duplicated variant: ${color} ${size}`,
         400,
@@ -128,24 +241,75 @@ const validateVariants = (variants) => {
       );
     }
 
-    duplicatedVariants.add(key);
+    duplicatedVariants.add(
+      key
+    );
   }
 };
 
-const normalizeVariants = (variants) => {
-  return variants.map((variant) => ({
-    color: variant.color.trim(),
-    codeColor: variant.codeColor.trim(),
-    size: variant.size.trim().toUpperCase(),
-    stock: variant.stock,
-    price: variant.price,
-  }));
+const normalizeVariants = (
+  variants
+) => {
+  return variants.map(
+    (variant) => {
+      const normalizedVariant = {
+        color:
+          variant.color.trim(),
+
+        colors:
+          variant.colors.map(
+            (
+              variantColor
+            ) => ({
+              name:
+                variantColor.name.trim(),
+
+              code:
+                variantColor.code
+                  .trim()
+                  .toUpperCase(),
+            })
+          ),
+
+        size:
+          variant.size
+            .trim()
+            .toUpperCase(),
+
+        stock:
+          variant.stock,
+
+        price:
+          variant.price,
+      };
+
+      if (
+        variant._id &&
+        mongoose.Types.ObjectId.isValid(
+          variant._id
+        )
+      ) {
+        normalizedVariant._id =
+          variant._id;
+      }
+
+      return normalizedVariant;
+    }
+  );
 };
 
-const createProduct = async (data, images = []) => {
-  const name = data.name?.trim();
-  const description = data.description?.trim();
-  const gender = data.gender?.trim();
+const createProduct = async (
+  data,
+  images = []
+) => {
+  const name =
+    data.name?.trim();
+
+  const description =
+    data.description?.trim();
+
+  const gender =
+    data.gender?.trim();
 
   if (!name) {
     throw new AppError(
@@ -171,21 +335,34 @@ const createProduct = async (data, images = []) => {
     );
   }
 
-  await validateCategory(data.category);
+  await validateCategory(
+    data.category
+  );
 
-  validateVariants(data.variants);
+  validateVariants(
+    data.variants
+  );
 
-  const slug = await buildUniqueSlug(name);
+  const slug =
+    await buildUniqueSlug(
+      name
+    );
 
   const discount =
-    data.discount !== undefined &&
-    data.discount !== null &&
+    data.discount !==
+      undefined &&
+    data.discount !==
+      null &&
     data.discount !== ""
-      ? Number(data.discount)
+      ? Number(
+          data.discount
+        )
       : 0;
 
   if (
-    Number.isNaN(discount) ||
+    Number.isNaN(
+      discount
+    ) ||
     discount < 0 ||
     discount > 100
   ) {
@@ -196,30 +373,48 @@ const createProduct = async (data, images = []) => {
     );
   }
 
-  const product = await Product.create({
-    name,
-    slug,
-    description,
-    gender,
-    category: data.category,
-    brand: data.brand?.trim() || null,
-    images,
-    variants: normalizeVariants(data.variants),
+  const product =
+    await Product.create({
+      name,
 
-    discount,
+      slug,
 
-    isActive:
-      typeof data.isActive === "boolean"
-        ? data.isActive
-        : true,
+      description,
 
-    isFeatured:
-      typeof data.isFeatured === "boolean"
-        ? data.isFeatured
-        : false,
-  });
+      gender,
 
-  return Product.findById(product._id).populate(
+      category:
+        data.category,
+
+      brand:
+        data.brand?.trim() ||
+        null,
+
+      images,
+
+      variants:
+        normalizeVariants(
+          data.variants
+        ),
+
+      discount,
+
+      isActive:
+        typeof data.isActive ===
+        "boolean"
+          ? data.isActive
+          : true,
+
+      isFeatured:
+        typeof data.isFeatured ===
+        "boolean"
+          ? data.isFeatured
+          : false,
+    });
+
+  return Product.findById(
+    product._id
+  ).populate(
     "category",
     "name slug"
   );
@@ -236,7 +431,11 @@ const getProducts = async (filters = {}) => {
   }
 
   if (filters.category) {
-    if (!mongoose.Types.ObjectId.isValid(filters.category)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(
+        filters.category
+      )
+    ) {
       throw new AppError(
         "Invalid category id",
         400,
@@ -244,23 +443,80 @@ const getProducts = async (filters = {}) => {
       );
     }
 
-    query.category = filters.category;
+    query.category =
+      filters.category;
   }
 
-  if (filters.isFeatured !== undefined) {
-    query.isFeatured = filters.isFeatured;
+  if (
+    filters.isFeatured !== undefined
+  ) {
+    query.isFeatured =
+      filters.isFeatured;
   }
 
   if (filters.gender) {
-      query.gender = {
-          $regex: `^${filters.gender.trim()}$`,
-          $options: "i",
-      }
+    query.gender = {
+      $regex: `^${filters.gender.trim()}$`,
+      $options: "i",
+    };
   }
 
-  return Product.find(query)
-    .populate("category", "name slug")
-    .sort({ createdAt: -1 });
+  const page = Math.max(
+    Number(filters.page) || 1,
+    1
+  );
+
+  const limit = Math.min(
+    Math.max(
+      Number(filters.limit) || 12,
+      1
+    ),
+    100
+  );
+
+  const skip =
+    (page - 1) * limit;
+
+  const [
+    products,
+    total,
+  ] = await Promise.all([
+    Product.find(query)
+      .populate(
+        "category",
+        "name slug"
+      )
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limit),
+
+    Product.countDocuments(
+      query
+    ),
+  ]);
+
+  const totalPages = Math.ceil(
+    total / limit
+  );
+
+  return {
+    products,
+
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+
+      hasNextPage:
+        page < totalPages,
+
+      hasPrevPage:
+        page > 1,
+    },
+  };
 };
 
 const getProductById = async (id) => {
@@ -288,8 +544,16 @@ const getProductById = async (id) => {
   return product;
 };
 
-const updateProduct = async (id, data, images = null) => {
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+const updateProduct = async (
+  id,
+  data,
+  images = null
+) => {
+  if (
+    !mongoose.Types.ObjectId.isValid(
+      id
+    )
+  ) {
     throw new AppError(
       "Invalid product id",
       400,
@@ -297,7 +561,8 @@ const updateProduct = async (id, data, images = null) => {
     );
   }
 
-  const product = await Product.findById(id);
+  const product =
+    await Product.findById(id);
 
   if (!product) {
     throw new AppError(
@@ -307,8 +572,12 @@ const updateProduct = async (id, data, images = null) => {
     );
   }
 
-  if (data.name !== undefined) {
-    const name = data.name.trim();
+  if (
+    data.name !==
+    undefined
+  ) {
+    const name =
+      data.name.trim();
 
     if (!name) {
       throw new AppError(
@@ -318,14 +587,25 @@ const updateProduct = async (id, data, images = null) => {
       );
     }
 
-    const slug = await buildUniqueSlug(name, product._id);
+    const slug =
+      await buildUniqueSlug(
+        name,
+        product._id
+      );
 
-    product.name = name;
-    product.slug = slug;
+    product.name =
+      name;
+
+    product.slug =
+      slug;
   }
 
-  if (data.description !== undefined) {
-    const description = data.description.trim();
+  if (
+    data.description !==
+    undefined
+  ) {
+    const description =
+      data.description.trim();
 
     if (!description) {
       throw new AppError(
@@ -335,52 +615,112 @@ const updateProduct = async (id, data, images = null) => {
       );
     }
 
-    product.description = description;
+    product.description =
+      description;
   }
 
-  if (data.category !== undefined) {
-    await validateCategory(data.category);
-    product.category = data.category;
+  if (
+    data.category !==
+    undefined
+  ) {
+    await validateCategory(
+      data.category
+    );
+
+    product.category =
+      data.category;
   }
 
-  if (data.brand !== undefined) {
-    product.brand = data.brand?.trim() || null;
+  if (
+    data.brand !==
+    undefined
+  ) {
+    product.brand =
+      data.brand?.trim() ||
+      null;
   }
 
-  if (data.variants !== undefined) {
-    validateVariants(data.variants);
-    product.variants = normalizeVariants(data.variants);
+  /*
+   * =========================
+   * VARIANTES
+   * =========================
+   */
+
+  if (
+    data.variants !==
+    undefined
+  ) {
+    validateVariants(
+      data.variants
+    );
+
+    /*
+     * normalizeVariants:
+     *
+     * - conserva _id cuando existe
+     * - soporta colors[]
+     * - normaliza talla
+     * - normaliza códigos HEX
+     */
+    product.variants =
+      normalizeVariants(
+        data.variants
+      );
   }
 
-  if (data.isActive !== undefined) {
-    product.isActive = data.isActive;
+  if (
+    data.isActive !==
+    undefined
+  ) {
+    product.isActive =
+      data.isActive;
   }
 
-  if (data.isFeatured !== undefined) {
-    product.isFeatured = data.isFeatured;
+  if (
+    data.isFeatured !==
+    undefined
+  ) {
+    product.isFeatured =
+      data.isFeatured;
   }
 
-  if (data.gender !== undefined) {
-  const gender = data.gender?.trim();
+  if (
+    data.gender !==
+    undefined
+  ) {
+    const gender =
+      data.gender?.trim();
 
-  if (!gender) {
+    if (!gender) {
       throw new AppError(
         "Product gender cannot be empty",
         400,
         "PRODUCT_GENDER_REQUIRED"
       );
     }
-    product.gender = gender;
+
+    product.gender =
+      gender;
   }
 
-  if (data.discount !== undefined) {
+  if (
+    data.discount !==
+    undefined
+  ) {
     const discount =
-      data.discount !== null &&
-      data.discount !== ""
-        ? Number(data.discount)
+      data.discount !==
+        null &&
+      data.discount !==
+        ""
+        ? Number(
+            data.discount
+          )
         : 0;
+
     if (
-      Number.isNaN(discount) ||
+      Number.isNaN(
+        discount
+      ) ||
       discount < 0 ||
       discount > 100
     ) {
@@ -390,22 +730,48 @@ const updateProduct = async (id, data, images = null) => {
         "INVALID_PRODUCT_DISCOUNT"
       );
     }
-    product.discount = discount;
+
+    product.discount =
+      discount;
   }
 
-  const previousImages = [...product.images];
+  /*
+   * =========================
+   * IMÁGENES
+   * =========================
+   */
 
-  if (images !== null) {
-    product.images = images;
+  const previousImages = [
+    ...product.images,
+  ];
+
+  if (
+    images !== null
+  ) {
+    product.images =
+      images;
   }
 
   await product.save();
 
-  if (images !== null && previousImages.length > 0) {
-    await uploadService.deleteImages(previousImages);
+  /*
+   * Solo eliminamos imágenes
+   * anteriores si realmente
+   * llegaron nuevas imágenes.
+   */
+  if (
+    images !== null &&
+    previousImages.length >
+      0
+  ) {
+    await uploadService.deleteImages(
+      previousImages
+    );
   }
 
-  return Product.findById(product._id).populate(
+  return Product.findById(
+    product._id
+  ).populate(
     "category",
     "name slug"
   );
